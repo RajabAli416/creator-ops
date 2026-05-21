@@ -1,0 +1,33 @@
+{
+  "name": "Organization",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Workspace name"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly workspace identifier"
+    },
+    "description": {
+      "type": "string",
+      "description": "Workspace description"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Workspace logo image URL"
+    },
+    "default_pipeline_stages": {
+      "type": "array",
+      "description": "Default pipeline stages for content items",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "name",
+    "slug"
+  ]
+}

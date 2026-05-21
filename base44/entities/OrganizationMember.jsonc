@@ -1,0 +1,48 @@
+{
+  "name": "OrganizationMember",
+  "type": "object",
+  "properties": {
+    "organization_id": {
+      "type": "string",
+      "description": "Reference to Organization"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the member"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of the member"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "owner",
+        "manager",
+        "editor",
+        "writer",
+        "viewer"
+      ],
+      "default": "viewer",
+      "description": "Member role in the organization"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "Member avatar URL"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "invited",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "organization_id",
+    "user_email",
+    "role"
+  ]
+}
