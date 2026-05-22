@@ -18,6 +18,7 @@ import Settings from '@/pages/Settings';
 import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
+import GoogleOAuthCallback from '@/pages/GoogleOAuthCallback';
 
 const AppRoutes = () => {
   const { loading, workspaceReady, needsOnboarding } = useWorkspace();
@@ -54,6 +55,7 @@ const AppRoutes = () => {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/team" element={<Team />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/integrations/google/callback" element={<GoogleOAuthCallback />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

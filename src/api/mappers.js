@@ -27,7 +27,20 @@ export function dbStatusToPipelineStage(status, metaStage) {
   return 'idea';
 }
 
-export function packContentDescription({ description, status, priority, due_date, assigned_members, labels, sort_order }) {
+export function packContentDescription({
+  description,
+  status,
+  priority,
+  due_date,
+  assigned_members,
+  labels,
+  sort_order,
+  youtube_video_url,
+  youtube_video_id,
+  drive_folder_url,
+  drive_folder_id,
+  drive_shared_with,
+}) {
   const text = (description || '').trim();
   const hasMeta =
     status ||
@@ -35,7 +48,12 @@ export function packContentDescription({ description, status, priority, due_date
     due_date ||
     assigned_members?.length ||
     labels?.length ||
-    sort_order != null;
+    sort_order != null ||
+    youtube_video_url ||
+    youtube_video_id ||
+    drive_folder_url ||
+    drive_folder_id ||
+    drive_shared_with?.length;
 
   if (!hasMeta) return text || null;
 
@@ -47,6 +65,11 @@ export function packContentDescription({ description, status, priority, due_date
       assigned_members: assigned_members || [],
       labels: labels || [],
       sort_order: sort_order ?? 0,
+      youtube_video_url: youtube_video_url || null,
+      youtube_video_id: youtube_video_id || null,
+      drive_folder_url: drive_folder_url || null,
+      drive_folder_id: drive_folder_id || null,
+      drive_shared_with: drive_shared_with || [],
     },
     text,
   });
@@ -68,6 +91,11 @@ export function unpackContentDescription(raw) {
           assigned_members: parsed._meta.assigned_members || [],
           labels: parsed._meta.labels || [],
           sort_order: parsed._meta.sort_order ?? 0,
+          youtube_video_url: parsed._meta.youtube_video_url || null,
+          youtube_video_id: parsed._meta.youtube_video_id || null,
+          drive_folder_url: parsed._meta.drive_folder_url || null,
+          drive_folder_id: parsed._meta.drive_folder_id || null,
+          drive_shared_with: parsed._meta.drive_shared_with || [],
         },
       };
     }
@@ -107,6 +135,9 @@ export function mapMemberRow(row) {
 
 export function mapContentRow(row) {
   const { text, meta } = unpackContentDescription(row.description);
+  const youtubeFromPlatform = row.platform === 'youtube';
+  const driveFromPlatform = row.platform === 'google-drive';
+
   return {
     id: row.id,
     organization_id: row.team_id,
@@ -122,6 +153,11 @@ export function mapContentRow(row) {
     content_url: row.content_url,
     platform: row.platform,
     thumbnail_url: row.thumbnail_url,
+    youtube_video_url: youtubeFromPlatform ? row.content_url : meta.youtube_video_url,
+    youtube_video_id: youtubeFromPlatform ? row.platform_id : meta.youtube_video_id,
+    drive_folder_url: driveFromPlatform ? row.content_url : meta.drive_folder_url,
+    drive_folder_id: driveFromPlatform ? row.platform_id : meta.drive_folder_id,
+    drive_shared_with: meta.drive_shared_with || [],
     created_date: row.created_at,
     updated_date: row.updated_at,
     created_by: row.created_by,

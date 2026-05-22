@@ -6,7 +6,7 @@ import { logActivity } from '@/lib/activity';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import {
-  ArrowLeft, Calendar, Flag, Tag, Youtube, FolderOpen,
+  ArrowLeft, Calendar, Flag, Tag,
   CheckSquare, Plus, MoreHorizontal, Trash2, Edit2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import ContentDetailTasks from '@/components/content/ContentDetailTasks';
+import ContentGooglePanel from '@/components/content/ContentGooglePanel';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ContentDetail() {
@@ -250,26 +251,7 @@ export default function ContentDetail() {
             )}
           </div>
 
-          {/* Links */}
-          <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Links</h3>
-            {item.youtube_video_url ? (
-              <a href={item.youtube_video_url} target="_blank" rel="noopener noreferrer" 
-                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors">
-                <Youtube className="w-4 h-4" />YouTube Video
-              </a>
-            ) : (
-              <p className="text-xs text-muted-foreground">No YouTube link</p>
-            )}
-            {item.drive_folder_url ? (
-              <a href={item.drive_folder_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors">
-                <FolderOpen className="w-4 h-4" />Drive Folder
-              </a>
-            ) : (
-              <p className="text-xs text-muted-foreground">No Drive folder</p>
-            )}
-          </div>
+          <ContentGooglePanel contentItem={item} organizationId={currentOrg.id} />
         </div>
       </div>
     </div>

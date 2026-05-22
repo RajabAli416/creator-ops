@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PageHeader from '@/components/shared/PageHeader';
+import GoogleIntegrationsSettings from '@/components/integrations/GoogleIntegrationsSettings';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -23,6 +24,7 @@ export default function Settings() {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     if (tabParam === 'workspace') setTab('workspace');
+    if (tabParam === 'integrations') setTab('integrations');
   }, []);
 
   useEffect(() => {
@@ -93,6 +95,9 @@ export default function Settings() {
         <TabsList className="bg-secondary mb-6">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workspace">New Workspace</TabsTrigger>
+          {hasPermission(['owner']) && (
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general">
@@ -159,6 +164,16 @@ export default function Settings() {
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">No workspace selected. Create one in the "New Workspace" tab.</p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          {currentOrg && hasPermission(['owner']) ? (
+            <GoogleIntegrationsSettings teamId={currentOrg.id} />
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              Only workspace owners can configure Google integrations.
+            </p>
           )}
         </TabsContent>
 

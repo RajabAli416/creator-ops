@@ -296,16 +296,35 @@ export const ContentItem = {
     if (data.title != null) payload.title = data.title;
     if (data.thumbnail_url != null) payload.thumbnail_url = data.thumbnail_url;
     if (data.content_url != null) payload.content_url = data.content_url;
+    if (data.platform != null) payload.platform = data.platform;
+    if (data.platform_id != null) payload.platform_id = data.platform_id;
 
-    if (
+    if (data.youtube_video_url != null) {
+      payload.content_url = data.youtube_video_url;
+      payload.platform = 'youtube';
+      if (data.youtube_video_id != null) payload.platform_id = data.youtube_video_id;
+    }
+    if (data.drive_folder_url != null) {
+      payload.content_url = data.drive_folder_url;
+      payload.platform = 'google-drive';
+      if (data.drive_folder_id != null) payload.platform_id = data.drive_folder_id;
+    }
+
+    const hasMetaUpdate =
       data.description != null ||
       data.status != null ||
       data.priority != null ||
       data.due_date != null ||
       data.assigned_members != null ||
       data.labels != null ||
-      data.sort_order != null
-    ) {
+      data.sort_order != null ||
+      data.youtube_video_url != null ||
+      data.youtube_video_id != null ||
+      data.drive_folder_url != null ||
+      data.drive_folder_id != null ||
+      data.drive_shared_with != null;
+
+    if (hasMetaUpdate) {
       const { text, meta } = unpackContentDescription(existing.description);
       const merged = {
         description: data.description ?? text,
@@ -315,6 +334,11 @@ export const ContentItem = {
         assigned_members: data.assigned_members ?? meta.assigned_members,
         labels: data.labels ?? meta.labels,
         sort_order: data.sort_order ?? meta.sort_order,
+        youtube_video_url: data.youtube_video_url ?? meta.youtube_video_url,
+        youtube_video_id: data.youtube_video_id ?? meta.youtube_video_id,
+        drive_folder_url: data.drive_folder_url ?? meta.drive_folder_url,
+        drive_folder_id: data.drive_folder_id ?? meta.drive_folder_id,
+        drive_shared_with: data.drive_shared_with ?? meta.drive_shared_with,
       };
       payload.description = packContentDescription(merged);
       if (data.status != null) {
