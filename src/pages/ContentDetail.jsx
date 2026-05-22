@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace, PIPELINE_STAGES, PRIORITY_CONFIG } from '@/lib/workspace.jsx';
 import { logActivity } from '@/lib/activity';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,7 +32,7 @@ export default function ContentDetail() {
   const { data: item, isLoading } = useQuery({
     queryKey: ['content-item', id],
     queryFn: async () => {
-      const items = await base44.entities.ContentItem.filter({ organization_id: currentOrg.id });
+      const items = await api.entities.ContentItem.filter({ organization_id: currentOrg.id });
       return items.find(i => i.id === id);
     },
     enabled: !!currentOrg && !!id,
@@ -40,7 +40,7 @@ export default function ContentDetail() {
 
   const { data: activities = [] } = useQuery({
     queryKey: ['activities', currentOrg?.id, id],
-    queryFn: () => base44.entities.ActivityLog.filter({ 
+    queryFn: () => api.entities.ActivityLog.filter({ 
       organization_id: currentOrg.id, 
       content_item_id: id 
     }, '-created_date', 20),
@@ -50,7 +50,7 @@ export default function ContentDetail() {
   const handleStatusChange = async (newStatus) => {
     const oldStage = PIPELINE_STAGES.find(s => s.id === item.status);
     const newStage = PIPELINE_STAGES.find(s => s.id === newStatus);
-    await base44.entities.ContentItem.update(id, { status: newStatus });
+    await api.entities.ContentItem.update(id, { status: newStatus });
     await logActivity({
       organizationId: currentOrg.id,
       contentItemId: id,
@@ -63,7 +63,7 @@ export default function ContentDetail() {
   };
 
   const handleSaveEdit = async () => {
-    await base44.entities.ContentItem.update(id, {
+    await api.entities.ContentItem.update(id, {
       ...editForm,
       labels: typeof editForm.labels === 'string' 
         ? editForm.labels.split(',').map(l => l.trim()).filter(Boolean)
@@ -81,7 +81,7 @@ export default function ContentDetail() {
   };
 
   const handleDelete = async () => {
-    await base44.entities.ContentItem.delete(id);
+    await api.entities.ContentItem.delete(id);
     await logActivity({
       organizationId: currentOrg.id,
       action: 'deleted',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace, PIPELINE_STAGES } from '@/lib/workspace.jsx';
 import { logActivity } from '@/lib/activity';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +20,7 @@ export default function Pipeline() {
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['content', currentOrg?.id],
-    queryFn: () => base44.entities.ContentItem.filter({ organization_id: currentOrg.id }),
+    queryFn: () => api.entities.ContentItem.filter({ organization_id: currentOrg.id }),
     enabled: !!currentOrg,
   });
 
@@ -40,7 +40,7 @@ export default function Pipeline() {
       return old.map(i => i.id === draggableId ? { ...i, status: newStatus } : i);
     });
 
-    await base44.entities.ContentItem.update(draggableId, {
+    await api.entities.ContentItem.update(draggableId, {
       status: newStatus,
       sort_order: destination.index,
     });

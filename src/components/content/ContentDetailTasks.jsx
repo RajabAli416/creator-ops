@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { logActivity } from '@/lib/activity';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, CheckCircle2, Circle, Clock, Trash2 } from 'lucide-react';
@@ -17,13 +17,13 @@ export default function ContentDetailTasks({ contentItemId, organizationId }) {
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', contentItemId],
-    queryFn: () => base44.entities.Task.filter({ content_item_id: contentItemId }),
+    queryFn: () => api.entities.Task.filter({ content_item_id: contentItemId }),
     enabled: !!contentItemId,
   });
 
   const handleAddTask = async () => {
     if (!newTitle.trim()) return;
-    await base44.entities.Task.create({
+    await api.entities.Task.create({
       organization_id: organizationId,
       content_item_id: contentItemId,
       title: newTitle,
@@ -44,7 +44,7 @@ export default function ContentDetailTasks({ contentItemId, organizationId }) {
 
   const toggleTask = async (task) => {
     const newStatus = task.status === 'done' ? 'todo' : 'done';
-    await base44.entities.Task.update(task.id, { status: newStatus });
+    await api.entities.Task.update(task.id, { status: newStatus });
     await logActivity({
       organizationId,
       contentItemId,
@@ -57,7 +57,7 @@ export default function ContentDetailTasks({ contentItemId, organizationId }) {
   };
 
   const deleteTask = async (task) => {
-    await base44.entities.Task.delete(task.id);
+    await api.entities.Task.delete(task.id);
     queryClient.invalidateQueries({ queryKey: ['tasks', contentItemId] });
   };
 

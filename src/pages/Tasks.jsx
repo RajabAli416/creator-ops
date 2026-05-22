@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace, PRIORITY_CONFIG } from '@/lib/workspace.jsx';
 import { logActivity } from '@/lib/activity';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,19 +22,19 @@ export default function Tasks() {
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['all-tasks', currentOrg?.id],
-    queryFn: () => base44.entities.Task.filter({ organization_id: currentOrg.id }, '-created_date'),
+    queryFn: () => api.entities.Task.filter({ organization_id: currentOrg.id }, '-created_date'),
     enabled: !!currentOrg,
   });
 
   const { data: contentItems = [] } = useQuery({
     queryKey: ['content', currentOrg?.id],
-    queryFn: () => base44.entities.ContentItem.filter({ organization_id: currentOrg.id }),
+    queryFn: () => api.entities.ContentItem.filter({ organization_id: currentOrg.id }),
     enabled: !!currentOrg,
   });
 
   const toggleTask = async (task) => {
     const newStatus = task.status === 'done' ? 'todo' : 'done';
-    await base44.entities.Task.update(task.id, { status: newStatus });
+    await api.entities.Task.update(task.id, { status: newStatus });
     await logActivity({
       organizationId: currentOrg.id,
       contentItemId: task.content_item_id,

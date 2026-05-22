@@ -1,8 +1,8 @@
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 
 export async function logActivity({ organizationId, contentItemId, taskId, action, entityType, details }) {
-  const user = await base44.auth.me();
-  await base44.entities.ActivityLog.create({
+  const user = await api.auth.me();
+  await api.entities.ActivityLog.create({
     organization_id: organizationId,
     content_item_id: contentItemId || '',
     task_id: taskId || '',

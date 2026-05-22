@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace, PIPELINE_STAGES, PRIORITY_CONFIG } from '@/lib/workspace.jsx';
 import { logActivity } from '@/lib/activity';
 import {
@@ -37,7 +37,7 @@ export default function CreateContentModal({ open, onOpenChange, defaultStatus, 
 
   useEffect(() => {
     if (currentOrg && open) {
-      base44.entities.OrganizationMember.filter({ organization_id: currentOrg.id })
+      api.entities.OrganizationMember.filter({ organization_id: currentOrg.id })
         .then(setMembers);
     }
   }, [currentOrg, open]);
@@ -53,7 +53,7 @@ export default function CreateContentModal({ open, onOpenChange, defaultStatus, 
     setLoading(true);
     
     const maxOrder = 999;
-    const item = await base44.entities.ContentItem.create({
+    const item = await api.entities.ContentItem.create({
       organization_id: currentOrg.id,
       title: form.title,
       description: form.description,

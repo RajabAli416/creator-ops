@@ -1,39 +1,40 @@
-**Welcome to your Base44 project** 
+# Creator Ops
 
-**About**
+Operations hub for creator teams: content pipeline, tasks, team members, and workspace settings.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Prerequisites
 
-This project contains everything you need to run your app locally.
+- Node.js 18+
+- npm
 
-**Edit the code in your local development environment**
+## Setup
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
-
-**Prerequisites:** 
-
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
-
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
-
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
+```bash
+npm install
+npm start
 ```
 
-Run the app: `npm run dev`
+Open the URL shown in the terminal (typically `http://localhost:5173`).
 
-**Publish your changes**
+Backend: [Supabase](https://supabase.com) (Auth + Postgres).
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+```bash
+cp .env.example .env.local
+# Edit .env.local with your Supabase URL + anon/publishable key (Dashboard → Settings → API)
+```
 
-**Docs & Support**
+**Do not commit** `.env.local` or any file with real API keys. Only `.env.example` (placeholders) belongs in git.
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+**First-time Supabase setup:** run `supabase/migrations/001_profiles_and_rls.sql` in the Supabase SQL Editor (creates profile trigger + RLS policies).
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+**First visit:** sign up at `/signup`, then create a workspace or join with the workspace **slug** (Settings → General).
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Start dev server |
+| `npm run dev` | Same as `npm start` |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |

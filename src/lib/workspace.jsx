@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { api } from '@/api/client';
 
 const WorkspaceContext = createContext(null);
+export const WORKSPACE_STORAGE_KEY = 'current_org_id';
 
 const PIPELINE_STAGES = [
   { id: 'idea', label: 'Idea', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
@@ -24,6 +25,7 @@ const PRIORITY_CONFIG = {
 const ROLE_CONFIG = {
   owner: { label: 'Owner', color: 'bg-amber-500/20 text-amber-400' },
   manager: { label: 'Manager', color: 'bg-purple-500/20 text-purple-400' },
+  admin: { label: 'Manager', color: 'bg-purple-500/20 text-purple-400' },
   editor: { label: 'Editor', color: 'bg-blue-500/20 text-blue-400' },
   writer: { label: 'Writer', color: 'bg-green-500/20 text-green-400' },
   viewer: { label: 'Viewer', color: 'bg-slate-500/20 text-slate-400' },
@@ -34,80 +36,117 @@ export function WorkspaceProvider({ children }) {
   const [orgs, setOrgs] = useState([]);
   const [currentMember, setCurrentMember] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+
+  const selectWorkspace = useCallback((userOrgs, allMembers, preferredOrgId) => {
+    setOrgs(userOrgs);
+
+    if (userOrgs.length === 0) {
+      setCurrentOrg(null);
+      setCurrentMember(null);
+      setWorkspaceReady(true);
+      localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+      return null;
+    }
+
+    const savedOrgId = preferredOrgId || localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    const org = userOrgs.find((o) => o.id === savedOrgId) || userOrgs[0];
+    const member = allMembers.find((m) => m.organization_id === org.id) || null;
+
+    setCurrentOrg(org);
+    setCurrentMember(member);
+    setWorkspaceReady(true);
+    localStorage.setItem(WORKSPACE_STORAGE_KEY, org.id);
+    return org;
+  }, []);
+
+  const loadWorkspaces = useCallback(async (preferredOrgId) => {
+    setLoading(true);
+    try {
+      const user = await api.auth.me();
+      const userOrgs = await api.entities.Organization.list();
+      const allMembers = await api.entities.OrganizationMember.filter({ user_id: user.id });
+      return selectWorkspace(userOrgs, allMembers, preferredOrgId);
+    } catch (error) {
+      console.error('Failed to load workspaces:', error);
+      setOrgs([]);
+      setCurrentOrg(null);
+      setCurrentMember(null);
+      setWorkspaceReady(true);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [selectWorkspace]);
 
   useEffect(() => {
     loadWorkspaces();
-  }, []);
-
-  const loadWorkspaces = async () => {
-    setLoading(true);
-    const user = await base44.auth.me();
-    const allOrgs = await base44.entities.Organization.list();
-    const allMembers = await base44.entities.OrganizationMember.filter({ user_email: user.email });
-    
-    const memberOrgIds = allMembers.map(m => m.organization_id);
-    const userOrgs = allOrgs.filter(o => memberOrgIds.includes(o.id) || o.created_by === user.email);
-    
-    setOrgs(userOrgs);
-    
-    if (userOrgs.length > 0) {
-      const savedOrgId = localStorage.getItem('current_org_id');
-      const org = userOrgs.find(o => o.id === savedOrgId) || userOrgs[0];
-      setCurrentOrg(org);
-      const member = allMembers.find(m => m.organization_id === org.id);
-      setCurrentMember(member);
-    }
-    setLoading(false);
-  };
+  }, [loadWorkspaces]);
 
   const switchOrg = async (orgId) => {
-    const org = orgs.find(o => o.id === orgId);
+    const org = orgs.find((o) => o.id === orgId);
     if (org) {
       setCurrentOrg(org);
-      localStorage.setItem('current_org_id', orgId);
-      const user = await base44.auth.me();
-      const members = await base44.entities.OrganizationMember.filter({ 
-        organization_id: orgId, 
-        user_email: user.email 
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, orgId);
+      const user = await api.auth.me();
+      const members = await api.entities.OrganizationMember.filter({
+        organization_id: orgId,
+        user_id: user.id,
       });
       setCurrentMember(members[0] || null);
+      return org;
     }
+    return loadWorkspaces(orgId);
   };
 
   const createOrg = async (data) => {
-    const user = await base44.auth.me();
-    const org = await base44.entities.Organization.create({
-      ...data,
-      default_pipeline_stages: PIPELINE_STAGES.map(s => s.id),
-    });
-    await base44.entities.OrganizationMember.create({
-      organization_id: org.id,
-      user_email: user.email,
-      user_name: user.full_name || user.email,
-      role: 'owner',
-      status: 'active',
-    });
-    await loadWorkspaces();
-    switchOrg(org.id);
+    const org = await api.entities.Organization.create(data);
+    await loadWorkspaces(org.id);
+    return org;
+  };
+
+  const joinOrg = async ({ slug, organizationId }) => {
+    const org = await api.workspace.joinTeam({ slug, organizationId });
+    await loadWorkspaces(org.id);
+    return org;
+  };
+
+  const getPendingInvites = () => api.workspace.getPendingTeamInvites();
+
+  const acceptInvite = async (notificationId, organizationId) => {
+    const org = await api.workspace.acceptTeamInvite(notificationId, organizationId);
+    await loadWorkspaces(org.id);
     return org;
   };
 
   const hasPermission = (requiredRoles) => {
     if (!currentMember) return false;
-    return requiredRoles.includes(currentMember.role);
+    const role = currentMember.role;
+    const expanded = role === 'admin' ? ['admin', 'manager'] : [role];
+    return requiredRoles.some((r) => expanded.includes(r) || r === role);
   };
 
+  /** True only for brand-new users with no workspace yet */
+  const needsOnboarding = workspaceReady && !loading && orgs.length === 0;
+
   return (
-    <WorkspaceContext.Provider value={{
-      currentOrg,
-      orgs,
-      currentMember,
-      loading,
-      switchOrg,
-      createOrg,
-      hasPermission,
-      refreshWorkspaces: loadWorkspaces,
-    }}>
+    <WorkspaceContext.Provider
+      value={{
+        currentOrg,
+        orgs,
+        currentMember,
+        loading,
+        workspaceReady,
+        needsOnboarding,
+        switchOrg,
+        createOrg,
+        joinOrg,
+        acceptInvite,
+        getPendingInvites,
+        hasPermission,
+        refreshWorkspaces: () => loadWorkspaces(),
+      }}
+    >
       {children}
     </WorkspaceContext.Provider>
   );

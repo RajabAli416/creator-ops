@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace } from '@/lib/workspace.jsx';
-import { Settings as SettingsIcon, Building2, Plus, Trash2, Save } from 'lucide-react';
+import { Building2, Plus, Trash2, Save, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,7 +34,7 @@ export default function Settings() {
   const handleSave = async () => {
     if (!currentOrg) return;
     setSaving(true);
-    await base44.entities.Organization.update(currentOrg.id, {
+    await api.entities.Organization.update(currentOrg.id, {
       name: orgForm.name,
       description: orgForm.description,
     });
@@ -61,16 +61,16 @@ export default function Settings() {
     if (!confirm('Are you sure? This will delete the workspace and all its data.')) return;
     
     // Delete all related data
-    const members = await base44.entities.OrganizationMember.filter({ organization_id: currentOrg.id });
-    const content = await base44.entities.ContentItem.filter({ organization_id: currentOrg.id });
-    const tasks = await base44.entities.Task.filter({ organization_id: currentOrg.id });
-    const activities = await base44.entities.ActivityLog.filter({ organization_id: currentOrg.id });
+    const members = await api.entities.OrganizationMember.filter({ organization_id: currentOrg.id });
+    const content = await api.entities.ContentItem.filter({ organization_id: currentOrg.id });
+    const tasks = await api.entities.Task.filter({ organization_id: currentOrg.id });
+    const activities = await api.entities.ActivityLog.filter({ organization_id: currentOrg.id });
     
-    for (const m of members) await base44.entities.OrganizationMember.delete(m.id);
-    for (const c of content) await base44.entities.ContentItem.delete(c.id);
-    for (const t of tasks) await base44.entities.Task.delete(t.id);
-    for (const a of activities) await base44.entities.ActivityLog.delete(a.id);
-    await base44.entities.Organization.delete(currentOrg.id);
+    for (const m of members) await api.entities.OrganizationMember.delete(m.id);
+    for (const c of content) await api.entities.ContentItem.delete(c.id);
+    for (const t of tasks) await api.entities.Task.delete(t.id);
+    for (const a of activities) await api.entities.ActivityLog.delete(a.id);
+    await api.entities.Organization.delete(currentOrg.id);
     
     await refreshWorkspaces();
     toast.success('Workspace deleted');
@@ -78,6 +78,12 @@ export default function Settings() {
   };
 
   const canEdit = hasPermission(['owner', 'manager']);
+
+  const handleCopySlug = () => {
+    if (!currentOrg?.slug) return;
+    navigator.clipboard.writeText(currentOrg.slug);
+    toast.success('Workspace slug copied');
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -114,6 +120,20 @@ export default function Settings() {
                     className="mt-1 h-20"
                     disabled={!canEdit}
                   />
+                </div>
+                <div>
+                  <Label>Workspace slug</Label>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Teammates use this slug to join your workspace (Join tab on welcome screen)
+                  </p>
+                  <div className="flex gap-2 mt-1">
+                    <Input readOnly value={currentOrg.slug || '—'} className="font-mono text-sm" />
+                    {currentOrg.slug && (
+                      <Button type="button" variant="outline" size="icon" onClick={handleCopySlug}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 {canEdit && (
                   <div className="flex gap-2 pt-2">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace, ROLE_CONFIG } from '@/lib/workspace.jsx';
 import { logActivity } from '@/lib/activity';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,7 +31,7 @@ export default function Team() {
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['members', currentOrg?.id],
-    queryFn: () => base44.entities.OrganizationMember.filter({ organization_id: currentOrg.id }),
+    queryFn: () => api.entities.OrganizationMember.filter({ organization_id: currentOrg.id }),
     enabled: !!currentOrg,
   });
 
@@ -49,7 +49,7 @@ export default function Team() {
       return;
     }
 
-    await base44.entities.OrganizationMember.create({
+    await api.entities.OrganizationMember.create({
       organization_id: currentOrg.id,
       user_email: inviteEmail,
       user_name: inviteEmail.split('@')[0],
@@ -72,13 +72,13 @@ export default function Team() {
   };
 
   const handleRoleChange = async (memberId, newRole) => {
-    await base44.entities.OrganizationMember.update(memberId, { role: newRole });
+    await api.entities.OrganizationMember.update(memberId, { role: newRole });
     queryClient.invalidateQueries({ queryKey: ['members', currentOrg?.id] });
     toast.success('Role updated');
   };
 
   const handleRemove = async (member) => {
-    await base44.entities.OrganizationMember.delete(member.id);
+    await api.entities.OrganizationMember.delete(member.id);
     await logActivity({
       organizationId: currentOrg.id,
       action: 'deleted',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { api } from '@/api/client';
 import { useWorkspace, PIPELINE_STAGES } from '@/lib/workspace.jsx';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -18,19 +18,19 @@ export default function Dashboard() {
 
   const { data: contentItems = [], isLoading: loadingContent } = useQuery({
     queryKey: ['content', currentOrg?.id],
-    queryFn: () => base44.entities.ContentItem.filter({ organization_id: currentOrg.id }),
+    queryFn: () => api.entities.ContentItem.filter({ organization_id: currentOrg.id }),
     enabled: !!currentOrg,
   });
 
   const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ['tasks', currentOrg?.id],
-    queryFn: () => base44.entities.Task.filter({ organization_id: currentOrg.id }),
+    queryFn: () => api.entities.Task.filter({ organization_id: currentOrg.id }),
     enabled: !!currentOrg,
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ['activities', currentOrg?.id],
-    queryFn: () => base44.entities.ActivityLog.filter({ organization_id: currentOrg.id }, '-created_date', 15),
+    queryFn: () => api.entities.ActivityLog.filter({ organization_id: currentOrg.id }, '-created_date', 15),
     enabled: !!currentOrg,
   });
 

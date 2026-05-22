@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import React from 'react';
+import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/lib/workspace.jsx';
 import { Bell, Search, LogOut, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function TopBar() {
-  const [user, setUser] = useState(null);
+  const { user, logout } = useAuth();
   const { currentMember } = useWorkspace();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser);
-  }, []);
 
   const initials = user?.full_name
     ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -62,7 +58,7 @@ export default function TopBar() {
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => base44.auth.logout()} className="text-destructive">
+            <DropdownMenuItem onClick={() => logout()} className="text-destructive">
               <LogOut className="w-4 h-4 mr-2" />
               Sign out
             </DropdownMenuItem>
