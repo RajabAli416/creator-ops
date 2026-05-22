@@ -126,6 +126,9 @@ export function WorkspaceProvider({ children }) {
     return requiredRoles.some((r) => expanded.includes(r) || r === role);
   };
 
+  /** Owner or manager — can create content and tasks */
+  const canCreateContent = hasPermission(['owner', 'manager']);
+
   /** True only for brand-new users with no workspace yet */
   const needsOnboarding = workspaceReady && !loading && orgs.length === 0;
 
@@ -144,6 +147,7 @@ export function WorkspaceProvider({ children }) {
         acceptInvite,
         getPendingInvites,
         hasPermission,
+        canCreateContent,
         refreshWorkspaces: () => loadWorkspaces(),
       }}
     >

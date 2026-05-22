@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { formatAuthError } from '@/api/supabase/auth';
 import AuthLayout from '@/components/auth/AuthLayout';
+import GoogleSignInButton, { AuthDivider } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,6 +55,9 @@ export default function Login() {
         </>
       }
     >
+      <GoogleSignInButton label="Continue with Google" />
+      <AuthDivider />
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">

@@ -126,6 +126,10 @@ export const AuthProvider = ({ children }) => {
     return currentUser;
   };
 
+  const loginWithGoogle = async () => {
+    await api.auth.signInWithGoogle();
+  };
+
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
@@ -173,6 +177,7 @@ export const AuthProvider = ({ children }) => {
         authChecked,
         login,
         signUp,
+        loginWithGoogle,
         logout,
         navigateToLogin,
         checkUserAuth,

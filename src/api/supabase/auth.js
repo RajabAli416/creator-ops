@@ -21,6 +21,17 @@ async function fetchProfile(userId) {
   return data;
 }
 
+function displayNameFromUser(user) {
+  const meta = user.user_metadata || {};
+  return (
+    meta.full_name ||
+    meta.name ||
+    meta.display_name ||
+    user.email?.split('@')[0] ||
+    'User'
+  );
+}
+
 async function ensureProfile(user) {
   let profile = await fetchProfile(user.id);
   if (profile) return profile;
@@ -30,7 +41,7 @@ async function ensureProfile(user) {
     .upsert({
       id: user.id,
       email: user.email,
-      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+      full_name: displayNameFromUser(user),
     })
     .select()
     .single();
@@ -86,6 +97,22 @@ export const supabaseAuth = {
     }
 
     return userFromSession(data.user, await fetchProfile(data.user.id));
+  },
+
+  async signInWithGoogle() {
+    assertSupabaseConfigured();
+    const redirectTo = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'online',
+          prompt: 'select_account',
+        },
+      },
+    });
+    if (error) throw error;
   },
 
   async login({ email, password }) {

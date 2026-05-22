@@ -32,7 +32,9 @@ cp .env.example .env.local
 
 **Google (YouTube + Drive):** workspace owners configure their own Google Cloud OAuth client in **Settings → Integrations**, connect Google, then use **Content detail** to upload videos or create shared Drive folders. Server routes live under `/api/google/*` and need `SUPABASE_SERVICE_ROLE_KEY` and `APP_URL` in Vercel (see `.env.example`). For local API testing, run `npx vercel dev` and set `VITE_API_PROXY=http://127.0.0.1:3000`.
 
-**First visit:** sign up at `/signup`, then create a workspace or join with the workspace **slug** (Settings → General).
+**First visit:** sign up at `/signup` (email/password or **Continue with Google**), then create a workspace or join with the workspace **slug** (Settings → General).
+
+**Sign in with Google (Supabase Auth):** In Supabase Dashboard → **Authentication** → **Providers** → enable **Google**, add your Google OAuth client ID/secret, and under **URL Configuration** add redirect URLs: `http://localhost:5173/` and your production URL (e.g. `https://your-app.vercel.app/`). This is separate from the workspace YouTube/Drive integration in Settings.
 
 ## Scripts
 

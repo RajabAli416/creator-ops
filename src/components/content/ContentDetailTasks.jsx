@@ -6,11 +6,12 @@ import { Plus, CheckCircle2, Circle, Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { PRIORITY_CONFIG } from '@/lib/workspace.jsx';
+import { PRIORITY_CONFIG, useWorkspace } from '@/lib/workspace.jsx';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ContentDetailTasks({ contentItemId, organizationId }) {
+  const { canCreateContent } = useWorkspace();
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -72,9 +73,11 @@ export default function ContentDetailTasks({ contentItemId, organizationId }) {
             <span className="text-xs text-muted-foreground">{completed}/{tasks.length} done</span>
           )}
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setAdding(true)} className="text-xs">
-          <Plus className="w-3.5 h-3.5 mr-1" />Add
-        </Button>
+        {canCreateContent && (
+          <Button variant="ghost" size="sm" onClick={() => setAdding(true)} className="text-xs">
+            <Plus className="w-3.5 h-3.5 mr-1" />Add
+          </Button>
+        )}
       </div>
 
       <div className="divide-y divide-border">
@@ -116,12 +119,15 @@ export default function ContentDetailTasks({ contentItemId, organizationId }) {
                   <Clock className="w-2.5 h-2.5" />{format(new Date(task.due_date), 'MMM d')}
                 </span>
               )}
-              <button 
-                onClick={() => deleteTask(task)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-              </button>
+              {canCreateContent && (
+                <button
+                  type="button"
+                  onClick={() => deleteTask(task)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                </button>
+              )}
             </div>
           );
         })}

@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import ContentCard from './ContentCard';
 import { PIPELINE_STAGES } from '@/lib/workspace.jsx';
 
-export default function PipelineColumn({ stageId, items, onAddContent }) {
+export default function PipelineColumn({ stageId, items, canAdd = false, onAddContent }) {
   const stage = PIPELINE_STAGES.find(s => s.id === stageId);
   if (!stage) return null;
 
@@ -18,12 +18,16 @@ export default function PipelineColumn({ stageId, items, onAddContent }) {
           </span>
           <span className="text-xs text-muted-foreground font-medium">{items.length}</span>
         </div>
-        <button 
-          onClick={() => onAddContent(stageId)}
-          className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        {canAdd && (
+          <button
+            type="button"
+            onClick={() => onAddContent(stageId)}
+            className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={`Add content to ${stage.label}`}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Droppable Area */}

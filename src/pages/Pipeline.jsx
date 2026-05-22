@@ -14,7 +14,7 @@ import { KanbanSkeleton } from '@/components/shared/LoadingSkeleton';
 import { toast } from 'sonner';
 
 export default function Pipeline() {
-  const { currentOrg } = useWorkspace();
+  const { currentOrg, canCreateContent } = useWorkspace();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultStage, setDefaultStage] = useState('idea');
@@ -77,10 +77,12 @@ export default function Pipeline() {
   return (
     <div>
       <PageHeader title="Content Pipeline" description="Drag and drop content through production stages">
-        <Button onClick={() => { setDefaultStage('idea'); setCreateOpen(true); }} className="bg-primary hover:bg-primary/90">
-          <Plus className="w-4 h-4 mr-2" />
-          New Content
-        </Button>
+        {canCreateContent && (
+          <Button onClick={() => { setDefaultStage('idea'); setCreateOpen(true); }} className="bg-primary hover:bg-primary/90">
+            <Plus className="w-4 h-4 mr-2" />
+            New Content
+          </Button>
+        )}
       </PageHeader>
 
       {isLoading ? (
@@ -89,9 +91,13 @@ export default function Pipeline() {
         <EmptyState
           icon={Filter}
           title="Pipeline is empty"
-          description="Create your first content item to start tracking your production workflow."
-          actionLabel="Create Content"
-          onAction={() => setCreateOpen(true)}
+          description={
+            canCreateContent
+              ? 'Create your first content item to start tracking your production workflow.'
+              : 'No content yet. Owners and managers can add items to the pipeline.'
+          }
+          actionLabel={canCreateContent ? 'Create Content' : undefined}
+          onAction={canCreateContent ? () => setCreateOpen(true) : undefined}
         />
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -105,6 +111,7 @@ export default function Pipeline() {
                   key={stage.id}
                   stageId={stage.id}
                   items={stageItems}
+                  canAdd={canCreateContent}
                   onAddContent={handleAddContent}
                 />
               );
