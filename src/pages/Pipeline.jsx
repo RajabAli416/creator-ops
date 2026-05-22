@@ -11,6 +11,7 @@ import PipelineColumn from '@/components/pipeline/PipelineColumn';
 import CreateContentModal from '@/components/pipeline/CreateContentModal';
 import EmptyState from '@/components/shared/EmptyState';
 import { KanbanSkeleton } from '@/components/shared/LoadingSkeleton';
+import { toast } from 'sonner';
 
 export default function Pipeline() {
   const { currentOrg } = useWorkspace();
@@ -34,30 +35,36 @@ export default function Pipeline() {
     if (!item) return;
 
     const newStatus = destination.droppableId;
-    
-    // Optimistic update
-    queryClient.setQueryData(['content', currentOrg?.id], (old) => {
-      return old.map(i => i.id === draggableId ? { ...i, status: newStatus } : i);
-    });
+    const previousItems = queryClient.getQueryData(['content', currentOrg?.id]);
 
-    await api.entities.ContentItem.update(draggableId, {
-      status: newStatus,
-      sort_order: destination.index,
-    });
+    queryClient.setQueryData(['content', currentOrg?.id], (old) =>
+      (old || []).map((i) => (i.id === draggableId ? { ...i, status: newStatus } : i))
+    );
 
-    if (source.droppableId !== destination.droppableId) {
-      const fromStage = PIPELINE_STAGES.find(s => s.id === source.droppableId);
-      const toStage = PIPELINE_STAGES.find(s => s.id === destination.droppableId);
-      await logActivity({
-        organizationId: currentOrg.id,
-        contentItemId: draggableId,
-        action: 'moved',
-        entityType: 'content',
-        details: `Moved "${item.title}" from ${fromStage?.label} to ${toStage?.label}`,
+    try {
+      await api.entities.ContentItem.update(draggableId, {
+        status: newStatus,
+        sort_order: destination.index,
       });
-    }
 
-    queryClient.invalidateQueries({ queryKey: ['content', currentOrg?.id] });
+      if (source.droppableId !== destination.droppableId) {
+        const fromStage = PIPELINE_STAGES.find((s) => s.id === source.droppableId);
+        const toStage = PIPELINE_STAGES.find((s) => s.id === destination.droppableId);
+        await logActivity({
+          organizationId: currentOrg.id,
+          contentItemId: draggableId,
+          action: 'moved',
+          entityType: 'content',
+          details: `Moved "${item.title}" from ${fromStage?.label} to ${toStage?.label}`,
+        });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['content', currentOrg?.id] });
+    } catch (error) {
+      console.error('Pipeline drag update failed:', error);
+      queryClient.setQueryData(['content', currentOrg?.id], previousItems);
+      toast.error(error.message || 'Could not move card');
+    }
   };
 
   const handleAddContent = (stageId) => {

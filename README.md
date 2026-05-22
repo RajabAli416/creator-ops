@@ -37,4 +37,8 @@ cp .env.example .env.local
 | `npm run dev` | Same as `npm start` |
 | `npm run build` | Production build |
 | `npm run preview` | Preview production build |
+
+## Deploy (Vercel / Netlify)
+
+This app uses client-side routing (`/pipeline`, `/content/:id`, etc.). The repo includes `vercel.json` and `public/_redirects` so refreshes serve `index.html` instead of a platform 404.
 | `npm run lint` | Run ESLint |
