@@ -1,6 +1,6 @@
 import { getUserFromBearer, assertTeamMember } from '../_lib/supabase.js';
 import { getStoredIntegration, getTeamGoogleConfig, getPublishingSettings } from '../_lib/google.js';
-import { getGoogleRedirectUri, resolveRedirectUri } from '../_lib/env.js';
+import { getGoogleRedirectUri, resolveRedirectUri, getSupabaseUrl, getServiceRoleKey } from '../_lib/env.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -36,6 +36,10 @@ export default async function handler(req, res) {
       publishing: getPublishingSettings(integration),
       redirectUri: redirectUriFromRequest,
       serverFallbackRedirectUri: getGoogleRedirectUri(),
+      serverConfigured: {
+        hasSupabaseUrl: !!getSupabaseUrl(),
+        hasServiceRoleKey: !!getServiceRoleKey(),
+      },
     });
   } catch (err) {
     console.error('status', err);

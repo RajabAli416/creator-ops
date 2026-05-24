@@ -15,6 +15,7 @@ export default function GoogleConnectionStatus({
   error,
   onRetry,
   compact = false,
+  serverConfigured,
 }) {
   if (isLoading) {
     return (
@@ -77,6 +78,27 @@ export default function GoogleConnectionStatus({
                 {connectedAt ? ` Connected ${new Date(connectedAt).toLocaleDateString()}.` : ''}
               </p>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (serverConfigured && !serverConfigured.hasServiceRoleKey) {
+    return (
+      <div
+        className={`rounded-lg border border-red-500/30 bg-red-500/10 ${
+          compact ? 'px-3 py-2' : 'px-4 py-3'
+        }`}
+      >
+        <div className="flex items-start gap-2">
+          <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-300">Server not configured</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Add <code className="text-[10px]">SUPABASE_SERVICE_ROLE_KEY</code> in Vercel environment
+              variables and redeploy. Google cannot stay connected without it.
+            </p>
           </div>
         </div>
       </div>

@@ -47,7 +47,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
     isError: statusError,
     error: statusErrorDetail,
     refetch: refetchStatus,
-    data: status,
+    serverConfigured,
   } = useGoogleConnection(organizationId);
 
   const { data: members = [] } = useQuery({
@@ -175,6 +175,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
         isError={statusError}
         error={statusErrorDetail}
         onRetry={() => refetchStatus()}
+        serverConfigured={serverConfigured}
         compact
       />
 

@@ -30,6 +30,7 @@ export default function Pipeline() {
     isError: googleStatusError,
     error: googleStatusErrorDetail,
     refetch: refetchGoogleStatus,
+    serverConfigured,
   } = useGoogleConnection(currentOrg?.id);
 
   const { data: items = [], isLoading } = useQuery({
@@ -64,6 +65,7 @@ export default function Pipeline() {
             isError={googleStatusError}
             error={googleStatusErrorDetail}
             onRetry={() => refetchGoogleStatus()}
+            serverConfigured={serverConfigured}
             compact
           />
         </div>

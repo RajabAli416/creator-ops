@@ -68,5 +68,6 @@ export function useGoogleConnection(teamId) {
     channelTitle: query.data?.channelTitle ?? null,
     connectedAt: query.data?.connectedAt ?? null,
     publishing: query.data?.publishing,
+    serverConfigured: query.data?.serverConfigured ?? null,
   };
 }

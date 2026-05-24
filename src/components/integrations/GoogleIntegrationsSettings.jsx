@@ -50,6 +50,7 @@ export default function GoogleIntegrationsSettings({ teamId }) {
     isError: statusError,
     error: statusErrorDetail,
     refetch: refetchStatus,
+    serverConfigured,
   } = useGoogleConnection(teamId);
 
   useEffect(() => {
@@ -154,6 +155,7 @@ export default function GoogleIntegrationsSettings({ teamId }) {
           isError={statusError}
           error={statusErrorDetail}
           onRetry={() => refetchStatus()}
+          serverConfigured={serverConfigured}
         />
 
         <div className="rounded-lg bg-secondary/50 p-4 space-y-2">

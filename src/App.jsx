@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from "sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -55,7 +55,6 @@ const AppRoutes = () => {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/team" element={<Team />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/integrations/google/callback" element={<GoogleOAuthCallback />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
@@ -64,6 +63,12 @@ const AppRoutes = () => {
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authError } = useAuth();
+  const location = useLocation();
+
+  // Must run before auth gates — otherwise Google redirects here while loading and the code is lost
+  if (location.pathname === '/integrations/google/callback') {
+    return <GoogleOAuthCallback />;
+  }
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
