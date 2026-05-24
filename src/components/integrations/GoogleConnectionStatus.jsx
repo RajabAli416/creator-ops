@@ -41,7 +41,8 @@ export default function GoogleConnectionStatus({
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-red-300">Could not verify Google connection</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {error?.message || 'API request failed. Ensure SUPABASE_SERVICE_ROLE_KEY is set on Vercel.'}
+              {error?.message ||
+                'API request failed. Set SUPABASE_SERVICE_ROLE_KEY in Vercel, run migration 002_google_integrations.sql, and redeploy.'}
             </p>
           </div>
           {onRetry && (

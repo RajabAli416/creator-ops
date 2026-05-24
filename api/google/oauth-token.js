@@ -54,13 +54,18 @@ export default async function handler(req, res) {
       /* optional */
     }
 
-    await saveIntegration(teamId, tokens, {
+    const saved = await saveIntegration(teamId, tokens, {
       channel_title: channelTitle,
       connected_by: user.email,
       connected_at: new Date().toISOString(),
     });
 
-    return res.status(200).json({ ok: true, connected: true, teamId, channelTitle });
+    return res.status(200).json({
+      ok: true,
+      connected: true,
+      teamId,
+      channelTitle: channelTitle || saved.metadata?.channel_title || null,
+    });
   } catch (err) {
     console.error('oauth-token', err);
     return res.status(500).json({ error: err.message || 'Token exchange failed' });

@@ -60,10 +60,38 @@ export async function saveIntegration(teamId, tokens, metadata = {}) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await admin.from('integrations').upsert(row, {
+  if (!row.refresh_token) {
+    throw new Error('No Google refresh token to save');
+  }
+
+  const { error: upsertError } = await admin.from('integrations').upsert(row, {
     onConflict: 'team_id,service_name',
   });
-  if (error) throw error;
+
+  if (upsertError) {
+    if (existing?.id) {
+      const { error: updateError } = await admin
+        .from('integrations')
+        .update(row)
+        .eq('id', existing.id);
+      if (updateError) {
+        throw new Error(`Could not save Google tokens: ${updateError.message}`);
+      }
+    } else {
+      const { error: insertError } = await admin.from('integrations').insert(row);
+      if (insertError) {
+        throw new Error(
+          `Could not save Google tokens: ${insertError.message}. Run supabase/migrations/002_google_integrations.sql in Supabase.`
+        );
+      }
+    }
+  }
+
+  const saved = await getStoredIntegration(teamId);
+  if (!saved?.refresh_token) {
+    throw new Error('Google tokens were not stored. Check integrations table and SUPABASE_SERVICE_ROLE_KEY.');
+  }
+  return saved;
 }
 
 export async function getAuthorizedClient(teamId) {

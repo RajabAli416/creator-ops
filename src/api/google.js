@@ -16,8 +16,28 @@ async function googleApi(path, options = {}) {
       ...options.headers,
     },
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.error || res.statusText || 'Request failed');
+
+  const contentType = res.headers.get('content-type') || '';
+  const text = await res.text();
+
+  let body = {};
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      if (text.trimStart().startsWith('<') || contentType.includes('text/html')) {
+        throw new Error(
+          'API returned HTML instead of JSON. On Vercel, redeploy after vercel.json fix so /api routes work.'
+        );
+      }
+      throw new Error(text.slice(0, 200) || 'Invalid API response');
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(body.error || res.statusText || `Request failed (${res.status})`);
+  }
+
   return body;
 }
 
@@ -37,8 +57,8 @@ export const googleApiClient = {
     return googleApi(`oauth-url?${qs}`);
   },
 
-  exchangeCode(code, state) {
-    return googleApi('oauth-token', {
+  async exchangeCode(code, state) {
+    const result = await googleApi('oauth-token', {
       method: 'POST',
       body: JSON.stringify({
         code,
@@ -46,6 +66,12 @@ export const googleApiClient = {
         redirectUri: this.getRedirectUri(),
       }),
     });
+    if (!result.connected) {
+      throw new Error(
+        result.error || 'Google sign-in finished but tokens were not saved on the server.'
+      );
+    }
+    return result;
   },
 
   disconnect(teamId) {

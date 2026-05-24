@@ -23,11 +23,14 @@ export default async function handler(req, res) {
 
     const redirectUriFromRequest = resolveRedirectUri(req);
 
-    const connected = !!(integration?.refresh_token || integration?.access_token);
+    const hasTokens = !!(integration?.refresh_token || integration?.access_token);
+    const connected = hasTokens;
 
     return res.status(200).json({
       configured: !!(config?.client_id && config?.client_secret),
       connected,
+      hasTokens,
+      integrationRow: !!integration,
       channelTitle: integration?.metadata?.channel_title || null,
       connectedAt: integration?.metadata?.connected_at || null,
       publishing: getPublishingSettings(integration),

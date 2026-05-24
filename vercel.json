@@ -1,11 +1,19 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/:path*", "destination": "/index.html" }
+  ],
   "functions": {
     "api/google/youtube-publish-from-drive.js": {
       "maxDuration": 300
     },
     "api/google/drive-scan.js": {
       "maxDuration": 60
+    },
+    "api/google/oauth-token.js": {
+      "maxDuration": 30
     }
   }
 }

@@ -51,7 +51,8 @@ export function useGoogleConnection(teamId) {
     retry: 2,
   });
 
-  const apiConnected = !!query.data?.connected;
+  const apiConnected =
+    !!query.data?.connected || !!query.data?.hasTokens || !!query.data?.integrationRow;
   const optimistic = wasRecentlyMarkedConnected(teamId);
   const connected = apiConnected || (optimistic && !query.isError);
   const configured = !!query.data?.configured;

@@ -32,10 +32,20 @@ cp .env.example .env.local
 1. `supabase/migrations/001_profiles_and_rls.sql` — profile trigger + RLS
 2. `supabase/migrations/002_google_integrations.sql` — Google OAuth config + integrations policies
 
-**Google (YouTube + Drive):** workspace owners configure their own Google Cloud OAuth client in **Settings → Integrations**, connect Google, then publish from the pipeline or content detail. Server routes live under `/api/google/*`. For local dev, add to `.env.local` (see `.env.example`):
+**Google (YouTube + Drive):** workspace owners configure their own Google Cloud OAuth client in **Settings → Integrations**, connect Google, then publish from the pipeline or content detail. Server routes live under `/api/google/*`.
 
-- `SUPABASE_SERVICE_ROLE_KEY` — required for API routes
-- `APP_URL=http://localhost:5173` — OAuth redirects
+**Vercel env (required for Google connect to stick):**
+
+| Variable | Where |
+|----------|--------|
+| `VITE_SUPABASE_URL` | Supabase → Settings → API |
+| `VITE_SUPABASE_ANON_KEY` | Same |
+| `SUPABASE_SERVICE_ROLE_KEY` | Same (service_role — **never** expose to client) |
+| `APP_URL` | `https://your-app.vercel.app` (no trailing slash) |
+
+Run `supabase/migrations/002_google_integrations.sql` in the Supabase SQL Editor if the `integrations` table does not exist.
+
+For local dev, add the same keys to `.env.local` (see `.env.example`) and use `npm start` so `/api` works.
 
 `npm start` runs Vite + `vercel dev` on port 3000 (Vite proxies `/api` there). If you see `ECONNREFUSED 127.0.0.1:3000`, run `npm run dev:api` in a second terminal or use `npm start` instead of `npm run dev:web` alone.
 

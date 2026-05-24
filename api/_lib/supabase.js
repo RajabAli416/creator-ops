@@ -5,7 +5,9 @@ export function getAdminClient() {
   const url = getSupabaseUrl();
   const key = getServiceRoleKey();
   if (!url || !key) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error(
+      'Server misconfigured: set SUPABASE_URL (or VITE_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY in Vercel env, then redeploy.'
+    );
   }
   return createClient(url, key, { auth: { persistSession: false } });
 }
