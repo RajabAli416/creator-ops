@@ -40,6 +40,10 @@ export function packContentDescription({
   drive_folder_url,
   drive_folder_id,
   drive_shared_with,
+  upload_status,
+  drive_final_file_id,
+  drive_final_file_name,
+  drive_ready_at,
 }) {
   const text = (description || '').trim();
   const hasMeta =
@@ -53,7 +57,11 @@ export function packContentDescription({
     youtube_video_id ||
     drive_folder_url ||
     drive_folder_id ||
-    drive_shared_with?.length;
+    drive_shared_with?.length ||
+    upload_status ||
+    drive_final_file_id ||
+    drive_final_file_name ||
+    drive_ready_at;
 
   if (!hasMeta) return text || null;
 
@@ -70,6 +78,10 @@ export function packContentDescription({
       drive_folder_url: drive_folder_url || null,
       drive_folder_id: drive_folder_id || null,
       drive_shared_with: drive_shared_with || [],
+      upload_status: upload_status || null,
+      drive_final_file_id: drive_final_file_id || null,
+      drive_final_file_name: drive_final_file_name || null,
+      drive_ready_at: drive_ready_at || null,
     },
     text,
   });
@@ -96,6 +108,10 @@ export function unpackContentDescription(raw) {
           drive_folder_url: parsed._meta.drive_folder_url || null,
           drive_folder_id: parsed._meta.drive_folder_id || null,
           drive_shared_with: parsed._meta.drive_shared_with || [],
+          upload_status: parsed._meta.upload_status || null,
+          drive_final_file_id: parsed._meta.drive_final_file_id || null,
+          drive_final_file_name: parsed._meta.drive_final_file_name || null,
+          drive_ready_at: parsed._meta.drive_ready_at || null,
         },
       };
     }
@@ -158,6 +174,10 @@ export function mapContentRow(row) {
     drive_folder_url: driveFromPlatform ? row.content_url : meta.drive_folder_url,
     drive_folder_id: driveFromPlatform ? row.platform_id : meta.drive_folder_id,
     drive_shared_with: meta.drive_shared_with || [],
+    upload_status: meta.upload_status || (youtubeFromPlatform ? 'uploaded' : null),
+    drive_final_file_id: meta.drive_final_file_id || null,
+    drive_final_file_name: meta.drive_final_file_name || null,
+    drive_ready_at: meta.drive_ready_at || null,
     created_date: row.created_at,
     updated_date: row.updated_at,
     created_by: row.created_by,

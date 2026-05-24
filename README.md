@@ -14,7 +14,9 @@ npm install
 npm start
 ```
 
-Open the URL shown in the terminal (typically `http://localhost:5173`).
+Open **http://localhost:5173** (Vite). Google/YouTube/Drive API routes need the Vercel dev server on port **3000** — `npm start` runs **both** automatically.
+
+**UI only (no `/api`):** `npm run dev:web`
 
 Backend: [Supabase](https://supabase.com) (Auth + Postgres).
 
@@ -30,7 +32,12 @@ cp .env.example .env.local
 1. `supabase/migrations/001_profiles_and_rls.sql` — profile trigger + RLS
 2. `supabase/migrations/002_google_integrations.sql` — Google OAuth config + integrations policies
 
-**Google (YouTube + Drive):** workspace owners configure their own Google Cloud OAuth client in **Settings → Integrations**, connect Google, then use **Content detail** to upload videos or create shared Drive folders. Server routes live under `/api/google/*` and need `SUPABASE_SERVICE_ROLE_KEY` and `APP_URL` in Vercel (see `.env.example`). For local API testing, run `npx vercel dev` and set `VITE_API_PROXY=http://127.0.0.1:3000`.
+**Google (YouTube + Drive):** workspace owners configure their own Google Cloud OAuth client in **Settings → Integrations**, connect Google, then publish from the pipeline or content detail. Server routes live under `/api/google/*`. For local dev, add to `.env.local` (see `.env.example`):
+
+- `SUPABASE_SERVICE_ROLE_KEY` — required for API routes
+- `APP_URL=http://localhost:5173` — OAuth redirects
+
+`npm start` runs Vite + `vercel dev` on port 3000 (Vite proxies `/api` there). If you see `ECONNREFUSED 127.0.0.1:3000`, run `npm run dev:api` in a second terminal or use `npm start` instead of `npm run dev:web` alone.
 
 **First visit:** sign up at `/signup` (email/password or **Continue with Google**), then create a workspace or join with the workspace **slug** (Settings → General).
 
@@ -40,8 +47,10 @@ cp .env.example .env.local
 
 | Command | Description |
 |---------|-------------|
-| `npm start` | Start dev server |
+| `npm start` | Vite + API (`vercel dev` on :3000) |
 | `npm run dev` | Same as `npm start` |
+| `npm run dev:web` | Vite only (no Google API) |
+| `npm run dev:api` | Vercel serverless API only (:3000) |
 | `npm run build` | Production build |
 | `npm run preview` | Preview production build |
 

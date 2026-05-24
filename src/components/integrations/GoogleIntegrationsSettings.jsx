@@ -4,6 +4,14 @@ import { ExternalLink, Link2, Unplug, Copy, CheckCircle2, Loader2 } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   googleApiClient,
@@ -18,6 +26,9 @@ export default function GoogleIntegrationsSettings({ teamId }) {
   const [clientSecret, setClientSecret] = useState('');
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [savingPublish, setSavingPublish] = useState(false);
+  const [defaultPrivacy, setDefaultPrivacy] = useState('private');
+  const [autoCreateDriveFolder, setAutoCreateDriveFolder] = useState(true);
 
   const redirectUri = getRedirectUriHint();
 
@@ -36,6 +47,13 @@ export default function GoogleIntegrationsSettings({ teamId }) {
   useEffect(() => {
     if (savedConfig?.client_id) setClientId(savedConfig.client_id);
   }, [savedConfig?.client_id]);
+
+  useEffect(() => {
+    if (status?.publishing) {
+      setDefaultPrivacy(status.publishing.defaultPrivacy || 'private');
+      setAutoCreateDriveFolder(status.publishing.autoCreateDriveFolder !== false);
+    }
+  }, [status?.publishing]);
 
   const handleSaveCredentials = async () => {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -88,6 +106,22 @@ export default function GoogleIntegrationsSettings({ teamId }) {
     toast.success('Redirect URI copied');
   };
 
+  const handleSavePublishing = async () => {
+    setSavingPublish(true);
+    try {
+      await googleApiClient.savePublishingSettings(teamId, {
+        defaultPrivacy,
+        autoCreateDriveFolder,
+      });
+      queryClient.invalidateQueries({ queryKey: ['google-status', teamId] });
+      toast.success('Publishing defaults saved');
+    } catch (err) {
+      toast.error(err.message || 'Could not save publishing settings');
+    } finally {
+      setSavingPublish(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-card border border-border rounded-xl p-6 space-y-4">
@@ -98,8 +132,8 @@ export default function GoogleIntegrationsSettings({ teamId }) {
               Google (YouTube + Drive)
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Use your own Google Cloud project. The workspace owner connects once; then you can upload to
-              YouTube and share Drive folders from content pages.
+              Connect once per workspace. The pipeline scans Drive for final videos; owners and managers publish
+              to YouTube in one click from the board.
             </p>
           </div>
           {!statusLoading && status?.connected && (
@@ -167,6 +201,42 @@ export default function GoogleIntegrationsSettings({ teamId }) {
             />
           </div>
         </div>
+
+        {status?.connected && (
+          <div className="rounded-lg border border-border p-4 space-y-4">
+            <p className="text-sm font-medium">Automated publishing</p>
+            <p className="text-xs text-muted-foreground">
+              Name exports final.mp4 in each card&apos;s Drive folder. The pipeline checks Drive every ~90s and
+              shows &quot;Ready to publish&quot; on cards.
+            </p>
+            <div>
+              <Label className="text-xs">Default YouTube visibility</Label>
+              <Select value={defaultPrivacy} onValueChange={setDefaultPrivacy}>
+                <SelectTrigger className="mt-1 h-9 max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">Private</SelectItem>
+                  <SelectItem value="unlisted">Unlisted</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex items-center justify-between gap-4 cursor-pointer">
+              <div>
+                <p className="text-sm">Auto-create Drive folder</p>
+                <p className="text-xs text-muted-foreground">
+                  When a card reaches Editing, create its assets folder automatically
+                </p>
+              </div>
+              <Switch checked={autoCreateDriveFolder} onCheckedChange={setAutoCreateDriveFolder} />
+            </label>
+            <Button variant="outline" size="sm" onClick={handleSavePublishing} disabled={savingPublish}>
+              {savingPublish ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save publishing defaults
+            </Button>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 pt-2">
           <Button onClick={handleSaveCredentials} disabled={saving}>

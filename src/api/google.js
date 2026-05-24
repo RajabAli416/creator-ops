@@ -51,6 +51,37 @@ export const googleApiClient = {
     });
   },
 
+  scanDrive(teamId) {
+    return googleApi('drive-scan', {
+      method: 'POST',
+      body: JSON.stringify({ teamId }),
+    });
+  },
+
+  publishFromDrive({ teamId, contentItemId, title, description, privacyStatus }) {
+    return googleApi('youtube-publish-from-drive', {
+      method: 'POST',
+      body: JSON.stringify({
+        teamId,
+        contentItemId,
+        title,
+        description,
+        privacyStatus,
+      }),
+    });
+  },
+
+  getPublishingSettings(teamId) {
+    return googleApi(`publishing-settings?teamId=${encodeURIComponent(teamId)}`);
+  },
+
+  savePublishingSettings(teamId, settings) {
+    return googleApi('publishing-settings', {
+      method: 'POST',
+      body: JSON.stringify({ teamId, ...settings }),
+    });
+  },
+
   async uploadToYoutube({ teamId, contentItemId, title, description, privacyStatus, file }) {
     const buffer = await file.arrayBuffer();
     const bytes = new Uint8Array(buffer);

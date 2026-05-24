@@ -1,3 +1,11 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "functions": {
+    "api/google/youtube-publish-from-drive.js": {
+      "maxDuration": 300
+    },
+    "api/google/drive-scan.js": {
+      "maxDuration": 60
+    }
+  }
 }

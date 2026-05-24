@@ -322,7 +322,11 @@ export const ContentItem = {
       data.youtube_video_id != null ||
       data.drive_folder_url != null ||
       data.drive_folder_id != null ||
-      data.drive_shared_with != null;
+      data.drive_shared_with != null ||
+      data.upload_status != null ||
+      data.drive_final_file_id != null ||
+      data.drive_final_file_name != null ||
+      data.drive_ready_at != null;
 
     if (hasMetaUpdate) {
       const { text, meta } = unpackContentDescription(existing.description);
@@ -339,6 +343,10 @@ export const ContentItem = {
         drive_folder_url: data.drive_folder_url ?? meta.drive_folder_url,
         drive_folder_id: data.drive_folder_id ?? meta.drive_folder_id,
         drive_shared_with: data.drive_shared_with ?? meta.drive_shared_with,
+        upload_status: data.upload_status ?? meta.upload_status,
+        drive_final_file_id: data.drive_final_file_id ?? meta.drive_final_file_id,
+        drive_final_file_name: data.drive_final_file_name ?? meta.drive_final_file_name,
+        drive_ready_at: data.drive_ready_at ?? meta.drive_ready_at,
       };
       payload.description = packContentDescription(merged);
       if (data.status != null) {

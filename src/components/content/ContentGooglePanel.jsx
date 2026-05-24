@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Youtube, FolderOpen, Upload, Loader2, Users } from 'lucide-react';
+import { Youtube, FolderOpen, Upload, Loader2, Users, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,17 +17,20 @@ import { googleApiClient } from '@/api/google';
 import { api } from '@/api/client';
 import { useWorkspace } from '@/lib/workspace.jsx';
 import { useAuth } from '@/lib/AuthContext';
+import { isReadyToPublish, publishStatusLabel } from '@/lib/publish';
+import { logActivity } from '@/lib/activity';
 
 export default function ContentGooglePanel({ contentItem, organizationId }) {
   const { user } = useAuth();
   const { hasPermission } = useWorkspace();
   const queryClient = useQueryClient();
   const isOwner = hasPermission(['owner']);
+  const canPublish = hasPermission(['owner', 'manager']);
 
-  const [videoFile, setVideoFile] = useState(null);
   const [uploadTitle, setUploadTitle] = useState(contentItem?.title || '');
   const [privacy, setPrivacy] = useState('private');
   const [uploading, setUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState(
     () => new Set(contentItem?.drive_shared_with || [])
@@ -47,32 +50,63 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
   });
 
   const connected = status?.connected;
+
+  useEffect(() => {
+    if (status?.publishing?.defaultPrivacy) {
+      setPrivacy(status.publishing.defaultPrivacy);
+    }
+  }, [status?.publishing?.defaultPrivacy]);
+
   const myEmail = user?.email?.toLowerCase();
   const driveAllowed =
     isOwner ||
     !contentItem?.drive_shared_with?.length ||
     contentItem.drive_shared_with.some((e) => e.toLowerCase() === myEmail);
 
-  const handleYoutubeUpload = async () => {
-    if (!videoFile) {
-      toast.error('Choose a video file');
-      return;
+  const statusInfo = publishStatusLabel(contentItem);
+  const ready = isReadyToPublish(contentItem);
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['content-item', contentItem.id] });
+    queryClient.invalidateQueries({ queryKey: ['content', organizationId] });
+  };
+
+  const handleScan = async () => {
+    setScanning(true);
+    try {
+      await googleApiClient.scanDrive(organizationId);
+      invalidate();
+      toast.success('Checked Drive folder');
+    } catch (err) {
+      toast.error(err.message || 'Drive check failed');
+    } finally {
+      setScanning(false);
     }
+  };
+
+  const handlePublishFromDrive = async () => {
     setUploading(true);
     try {
-      const result = await googleApiClient.uploadToYoutube({
+      const result = await googleApiClient.publishFromDrive({
         teamId: organizationId,
         contentItemId: contentItem.id,
         title: uploadTitle || contentItem.title,
         description: contentItem.description || '',
         privacyStatus: privacy,
-        file: videoFile,
       });
-      toast.success('Uploaded to YouTube');
-      queryClient.invalidateQueries({ queryKey: ['content-item', contentItem.id] });
+      await logActivity({
+        organizationId,
+        contentItemId: contentItem.id,
+        action: 'published',
+        entityType: 'content',
+        details: `Published "${contentItem.title}" to YouTube from Drive`,
+      });
+      toast.success('Published to YouTube');
+      invalidate();
       if (result.videoUrl) window.open(result.videoUrl, '_blank');
     } catch (err) {
-      toast.error(err.message || 'Upload failed');
+      toast.error(err.message || 'Publish failed');
+      invalidate();
     } finally {
       setUploading(false);
     }
@@ -94,7 +128,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
         drive_shared_with: result.sharedWith,
       });
       toast.success('Drive folder created');
-      queryClient.invalidateQueries({ queryKey: ['content-item', contentItem.id] });
+      invalidate();
     } catch (err) {
       toast.error(err.message || 'Could not create folder');
     } finally {
@@ -129,50 +163,67 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
         Google integrations
       </h3>
 
-      {isOwner && (
+      {canPublish && (
         <div className="space-y-3 border-b border-border pb-4">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Youtube className="w-4 h-4 text-red-400" />
-            Upload to YouTube
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Youtube className="w-4 h-4 text-red-400" />
+              YouTube
+            </div>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleScan} disabled={scanning}>
+              {scanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+              Check Drive
+            </Button>
           </div>
-          <div>
-            <Label className="text-xs">Title</Label>
-            <Input
-              value={uploadTitle}
-              onChange={(e) => setUploadTitle(e.target.value)}
-              className="mt-1 h-8 text-sm"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Visibility</Label>
-            <Select value={privacy} onValueChange={setPrivacy}>
-              <SelectTrigger className="mt-1 h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="private">Private</SelectItem>
-                <SelectItem value="unlisted">Unlisted</SelectItem>
-                <SelectItem value="public">Public</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Video file (max ~48MB)</Label>
-            <Input
-              type="file"
-              accept="video/*"
-              className="mt-1 text-xs"
-              onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-            />
-          </div>
-          <Button size="sm" onClick={handleYoutubeUpload} disabled={uploading || !videoFile}>
-            {uploading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4 mr-2" />
-            )}
-            Upload
-          </Button>
+
+          {statusInfo && (
+            <p className="text-xs text-muted-foreground">
+              {statusInfo.label}
+              {contentItem.drive_final_file_name ? ` · ${contentItem.drive_final_file_name}` : ''}
+            </p>
+          )}
+
+          {!contentItem.youtube_video_url && (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Drop your export in the linked Drive folder (name it final.mp4). Publishing streams from Drive — no file picker.
+              </p>
+              <div>
+                <Label className="text-xs">Title</Label>
+                <Input
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Visibility</Label>
+                <Select value={privacy} onValueChange={setPrivacy}>
+                  <SelectTrigger className="mt-1 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="unlisted">Unlisted</SelectItem>
+                    <SelectItem value="public">Public</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                onClick={handlePublishFromDrive}
+                disabled={uploading || !ready || !contentItem.drive_folder_id}
+              >
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                Publish from Drive
+              </Button>
+            </>
+          )}
+
           {contentItem.youtube_video_url && (
             <a
               href={contentItem.youtube_video_url}
@@ -208,7 +259,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
         ) : isOwner ? (
           <>
             <p className="text-xs text-muted-foreground">
-              Create a folder and choose which teammates get editor access (invite email).
+              Folders are also created automatically when a card reaches Editing (if enabled in Integrations).
             </p>
             {members.length > 0 && (
               <div className="space-y-2 max-h-32 overflow-y-auto">

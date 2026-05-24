@@ -38,6 +38,19 @@ export async function assertTeamOwner(userId, teamId) {
   return data?.role === 'owner';
 }
 
+/** Owner or manager (admin) — can publish to YouTube */
+export async function assertTeamPublisher(userId, teamId) {
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from('team_members')
+    .select('role')
+    .eq('team_id', teamId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.role === 'owner' || data?.role === 'admin';
+}
+
 export async function assertTeamMember(userId, teamId) {
   const admin = getAdminClient();
   const { data, error } = await admin

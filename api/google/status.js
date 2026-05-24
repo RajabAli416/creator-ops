@@ -1,5 +1,5 @@
 import { getUserFromBearer, assertTeamMember } from '../_lib/supabase.js';
-import { getStoredIntegration, getTeamGoogleConfig } from '../_lib/google.js';
+import { getStoredIntegration, getTeamGoogleConfig, getPublishingSettings } from '../_lib/google.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -25,6 +25,7 @@ export default async function handler(req, res) {
       connected: !!(integration?.is_active && integration?.refresh_token),
       channelTitle: integration?.metadata?.channel_title || null,
       connectedAt: integration?.metadata?.connected_at || null,
+      publishing: getPublishingSettings(integration),
     });
   } catch (err) {
     console.error('status', err);

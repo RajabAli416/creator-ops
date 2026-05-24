@@ -104,3 +104,39 @@ export function decodeOAuthState(state) {
   if (Date.now() - parsed.t > 1000 * 60 * 30) throw new Error('OAuth state expired');
   return parsed;
 }
+
+export const DEFAULT_PUBLISHING_SETTINGS = {
+  defaultPrivacy: 'private',
+  autoCreateDriveFolder: true,
+};
+
+export function getPublishingSettings(integration) {
+  return {
+    ...DEFAULT_PUBLISHING_SETTINGS,
+    ...(integration?.metadata?.publishing || {}),
+  };
+}
+
+export async function savePublishingSettings(teamId, publishing) {
+  const integration = await getStoredIntegration(teamId);
+  const metadata = {
+    ...(integration?.metadata || {}),
+    publishing: {
+      ...DEFAULT_PUBLISHING_SETTINGS,
+      ...(integration?.metadata?.publishing || {}),
+      ...publishing,
+    },
+  };
+  await saveIntegration(
+    teamId,
+    {
+      access_token: integration.access_token,
+      refresh_token: integration.refresh_token,
+      expiry_date: integration.token_expires_at
+        ? new Date(integration.token_expires_at).getTime()
+        : null,
+    },
+    metadata
+  );
+  return metadata.publishing;
+}
