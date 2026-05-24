@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '@/api/client';
-import { useWorkspace } from '@/lib/workspace.jsx';
+import { useWorkspace, PIPELINE_STAGES } from '@/lib/workspace.jsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
