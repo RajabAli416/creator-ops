@@ -17,7 +17,7 @@ import { googleApiClient } from '@/api/google';
 import { api } from '@/api/client';
 import { useWorkspace } from '@/lib/workspace.jsx';
 import { useAuth } from '@/lib/AuthContext';
-import { isReadyToPublish, publishStatusLabel } from '@/lib/publish';
+import { canAttemptPublish, isReadyToPublish, publishStatusLabel } from '@/lib/publish';
 import { logActivity } from '@/lib/activity';
 
 export default function ContentGooglePanel({ contentItem, organizationId }) {
@@ -63,13 +63,22 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
     !contentItem?.drive_shared_with?.length ||
     contentItem.drive_shared_with.some((e) => e.toLowerCase() === myEmail);
 
-  const statusInfo = publishStatusLabel(contentItem);
+  const statusInfo = publishStatusLabel(contentItem, {
+    googleConnected: connected,
+    canPublish,
+  });
   const ready = isReadyToPublish(contentItem);
+  const canPublishNow = canAttemptPublish(contentItem);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['content-item', contentItem.id] });
     queryClient.invalidateQueries({ queryKey: ['content', organizationId] });
   };
+
+  useEffect(() => {
+    if (!connected || !organizationId) return;
+    googleApiClient.scanDrive(organizationId).then(() => invalidate());
+  }, [connected, organizationId, contentItem?.id, queryClient]);
 
   const handleScan = async () => {
     setScanning(true);
@@ -212,7 +221,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
               <Button
                 size="sm"
                 onClick={handlePublishFromDrive}
-                disabled={uploading || !ready || !contentItem.drive_folder_id}
+                disabled={uploading || !canPublishNow}
               >
                 {uploading ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -221,6 +230,16 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
                 )}
                 Publish from Drive
               </Button>
+              {canPublishNow && !ready && (
+                <p className="text-[10px] text-muted-foreground">
+                  No final detected yet — add final.mp4 to the folder, then tap Check Drive.
+                </p>
+              )}
+              {!canPublishNow && (
+                <p className="text-[10px] text-muted-foreground">
+                  Create a Drive folder below before publishing.
+                </p>
+              )}
             </>
           )}
 

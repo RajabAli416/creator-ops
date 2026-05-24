@@ -129,6 +129,9 @@ export function WorkspaceProvider({ children }) {
   /** Owner or manager — can create content and tasks */
   const canCreateContent = hasPermission(['owner', 'manager']);
 
+  /** Owner or manager — can publish to YouTube */
+  const canPublish = hasPermission(['owner', 'manager']);
+
   /** True only for brand-new users with no workspace yet */
   const needsOnboarding = workspaceReady && !loading && orgs.length === 0;
 
@@ -148,6 +151,7 @@ export function WorkspaceProvider({ children }) {
         getPendingInvites,
         hasPermission,
         canCreateContent,
+        canPublish,
         refreshWorkspaces: () => loadWorkspaces(),
       }}
     >

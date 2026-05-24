@@ -5,7 +5,9 @@ import {
   getTeamGoogleConfig,
   decodeOAuthState,
   saveIntegration,
+  resolveRedirectUri,
 } from '../_lib/google.js';
+import { getGoogleRedirectUri } from '../_lib/env.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'code and state are required' });
     }
 
-    const { teamId, userId } = decodeOAuthState(state);
+    const { teamId, userId, redirectUri: stateRedirectUri } = decodeOAuthState(state);
     if (userId !== user.id) {
       return res.status(403).json({ error: 'OAuth state does not match signed-in user' });
     }
@@ -32,8 +34,9 @@ export default async function handler(req, res) {
     const config = await getTeamGoogleConfig(teamId);
     if (!config) return res.status(400).json({ error: 'Google credentials not configured' });
 
-    const oauth2 = createOAuthClient(config);
-    const { tokens } = await oauth2.getToken(code);
+    const redirectUri = resolveRedirectUri(req) || stateRedirectUri || getGoogleRedirectUri();
+    const oauth2 = createOAuthClient(config, redirectUri);
+    const { tokens } = await oauth2.getToken({ code, redirect_uri: redirectUri });
     if (!tokens.refresh_token) {
       return res.status(400).json({
         error: 'No refresh token received. Revoke app access in Google Account and connect again.',

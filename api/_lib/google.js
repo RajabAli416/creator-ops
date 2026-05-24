@@ -2,6 +2,8 @@ import { google } from 'googleapis';
 import { getAdminClient } from './supabase.js';
 import { getGoogleRedirectUri } from './env.js';
 
+export { buildGoogleRedirectUri, validateRedirectUri, resolveRedirectUri } from './env.js';
+
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
@@ -20,11 +22,11 @@ export async function getTeamGoogleConfig(teamId) {
   return data;
 }
 
-export function createOAuthClient(config) {
+export function createOAuthClient(config, redirectUri = getGoogleRedirectUri()) {
   return new google.auth.OAuth2(
     config.client_id,
     config.client_secret,
-    getGoogleRedirectUri()
+    redirectUri
   );
 }
 
@@ -93,8 +95,10 @@ export async function getAuthorizedClient(teamId) {
   return oauth2;
 }
 
-export function encodeOAuthState(teamId, userId) {
-  return Buffer.from(JSON.stringify({ teamId, userId, t: Date.now() })).toString('base64url');
+export function encodeOAuthState(teamId, userId, redirectUri) {
+  return Buffer.from(
+    JSON.stringify({ teamId, userId, redirectUri, t: Date.now() })
+  ).toString('base64url');
 }
 
 export function decodeOAuthState(state) {

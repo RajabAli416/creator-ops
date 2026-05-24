@@ -4,6 +4,7 @@ import {
   getTeamGoogleConfig,
   GOOGLE_SCOPES,
   encodeOAuthState,
+  resolveRedirectUri,
 } from '../_lib/google.js';
 
 export default async function handler(req, res) {
@@ -29,15 +30,16 @@ export default async function handler(req, res) {
       });
     }
 
-    const oauth2 = createOAuthClient(config);
+    const redirectUri = resolveRedirectUri(req);
+    const oauth2 = createOAuthClient(config, redirectUri);
     const url = oauth2.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent',
       scope: GOOGLE_SCOPES,
-      state: encodeOAuthState(teamId, user.id),
+      state: encodeOAuthState(teamId, user.id, redirectUri),
     });
 
-    return res.status(200).json({ url });
+    return res.status(200).json({ url, redirectUri });
   } catch (err) {
     console.error('oauth-url', err);
     return res.status(500).json({ error: err.message || 'Server error' });

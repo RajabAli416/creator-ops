@@ -10,14 +10,23 @@ import CreateContentModal from '@/components/pipeline/CreateContentModal';
 import EmptyState from '@/components/shared/EmptyState';
 import { KanbanSkeleton } from '@/components/shared/LoadingSkeleton';
 import { usePipelineDriveSync } from '@/hooks/usePipelineDriveSync';
+import { googleApiClient } from '@/api/google';
 
 export default function Pipeline() {
-  const { currentOrg, canCreateContent, hasPermission } = useWorkspace();
+  const { currentOrg, canCreateContent, canPublish, hasPermission } = useWorkspace();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultStage, setDefaultStage] = useState('idea');
 
-  const canPublish = hasPermission(['owner', 'manager']);
+  const isOwner = hasPermission(['owner']);
+
+  const { data: googleStatus } = useQuery({
+    queryKey: ['google-status', currentOrg?.id],
+    queryFn: () => googleApiClient.getStatus(currentOrg.id),
+    enabled: !!currentOrg?.id,
+  });
+
+  const googleConnected = !!googleStatus?.connected;
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['content', currentOrg?.id],
@@ -87,6 +96,8 @@ export default function Pipeline() {
                 onAddContent={handleAddContent}
                 organizationId={currentOrg.id}
                 canPublish={canPublish}
+                isOwner={isOwner}
+                googleConnected={googleConnected}
                 onPublished={handlePublished}
               />
             );

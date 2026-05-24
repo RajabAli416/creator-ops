@@ -10,6 +10,8 @@ export default function PipelineColumn({
   onAddContent,
   organizationId,
   canPublish = false,
+  isOwner = false,
+  googleConnected = false,
   onPublished,
 }) {
   const stage = PIPELINE_STAGES.find((s) => s.id === stageId);
@@ -43,6 +45,8 @@ export default function PipelineColumn({
             item={item}
             organizationId={organizationId}
             canPublish={canPublish}
+            isOwner={isOwner}
+            googleConnected={googleConnected}
             onPublished={onPublished}
           />
         ))}

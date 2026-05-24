@@ -1,4 +1,4 @@
-const MIN_VIDEO_BYTES = 10 * 1024 * 1024;
+const MIN_VIDEO_BYTES = 1 * 1024 * 1024;
 const FINAL_NAME_RE = /final/i;
 
 export async function listVideosInFolder(drive, folderId) {

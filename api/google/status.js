@@ -1,5 +1,6 @@
 import { getUserFromBearer, assertTeamMember } from '../_lib/supabase.js';
 import { getStoredIntegration, getTeamGoogleConfig, getPublishingSettings } from '../_lib/google.js';
+import { getGoogleRedirectUri, resolveRedirectUri } from '../_lib/env.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -20,12 +21,16 @@ export default async function handler(req, res) {
     const config = await getTeamGoogleConfig(teamId);
     const integration = await getStoredIntegration(teamId);
 
+    const redirectUriFromRequest = resolveRedirectUri(req);
+
     return res.status(200).json({
       configured: !!(config?.client_id && config?.client_secret),
       connected: !!(integration?.is_active && integration?.refresh_token),
       channelTitle: integration?.metadata?.channel_title || null,
       connectedAt: integration?.metadata?.connected_at || null,
       publishing: getPublishingSettings(integration),
+      redirectUri: redirectUriFromRequest,
+      serverFallbackRedirectUri: getGoogleRedirectUri(),
     });
   } catch (err) {
     console.error('status', err);

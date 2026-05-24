@@ -5,8 +5,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PRIORITY_CONFIG } from '@/lib/workspace.jsx';
-import { isReadyToPublish, publishStatusLabel } from '@/lib/publish';
+import {
+  canAttemptPublish,
+  hasDriveFolder,
+  isReadyToPublish,
+  publishStatusLabel,
+} from '@/lib/publish';
 import { googleApiClient } from '@/api/google';
+import { api } from '@/api/client';
 import { logActivity } from '@/lib/activity';
 import { format, isPast, isToday } from 'date-fns';
 import { toast } from 'sonner';
@@ -23,15 +29,20 @@ export default function ContentCard({
   item,
   organizationId,
   canPublish = false,
+  isOwner = false,
+  googleConnected = false,
   onPublished,
 }) {
   const navigate = useNavigate();
   const [publishing, setPublishing] = useState(false);
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const priority = PRIORITY_CONFIG[item.priority] || PRIORITY_CONFIG.medium;
   const isOverdue = item.due_date && isPast(new Date(item.due_date)) && !isToday(new Date(item.due_date));
   const assignees = item.assigned_members || [];
-  const statusInfo = publishStatusLabel(item);
-  const showPublish = canPublish && isReadyToPublish(item) && item.upload_status !== 'uploading';
+  const statusInfo = publishStatusLabel(item, { googleConnected, canPublish });
+  const showPublisherActions = canPublish && googleConnected;
+  const showPublishButton = showPublisherActions && canAttemptPublish(item);
+  const publishNeedsScan = showPublishButton && !isReadyToPublish(item);
 
   const openDetail = () => navigate(`/content/${item.id}`);
 
@@ -61,6 +72,31 @@ export default function ContentCard({
       onPublished?.();
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handleCreateFolder = async (e) => {
+    e.stopPropagation();
+    if (!organizationId || creatingFolder || !isOwner) return;
+    setCreatingFolder(true);
+    try {
+      const result = await googleApiClient.createDriveFolder({
+        teamId: organizationId,
+        contentItemId: item.id,
+        folderName: `${item.title} — assets`,
+        shareWithEmails: [],
+      });
+      await api.entities.ContentItem.update(item.id, {
+        drive_folder_url: result.folderUrl,
+        drive_folder_id: result.folderId,
+        drive_shared_with: result.sharedWith,
+      });
+      toast.success('Drive folder created');
+      onPublished?.();
+    } catch (err) {
+      toast.error(err.message || 'Could not create folder');
+    } finally {
+      setCreatingFolder(false);
     }
   };
 
@@ -115,14 +151,19 @@ export default function ContentCard({
         <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{item.description}</p>
       )}
 
-      {(showPublish || item.drive_folder_url || item.youtube_video_url) && (
+      {(showPublisherActions || item.drive_folder_url || item.youtube_video_url) && (
         <div className="flex flex-wrap gap-1.5 mt-2.5" onClick={(e) => e.stopPropagation()}>
-          {showPublish && (
+          {showPublishButton && (
             <Button
               size="sm"
               className="h-7 text-xs"
               disabled={publishing}
               onClick={handlePublish}
+              title={
+                publishNeedsScan
+                  ? 'Upload final.mp4 to Drive first, or open card and tap Check Drive'
+                  : undefined
+              }
             >
               {publishing ? (
                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -132,7 +173,23 @@ export default function ContentCard({
               Publish to YouTube
             </Button>
           )}
-          {item.drive_folder_url && (
+          {showPublisherActions && !hasDriveFolder(item) && isOwner && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              disabled={creatingFolder}
+              onClick={handleCreateFolder}
+            >
+              {creatingFolder ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <FolderOpen className="w-3 h-3 mr-1" />
+              )}
+              Create Drive folder
+            </Button>
+          )}
+          {hasDriveFolder(item) && (
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleDriveLink}>
               <FolderOpen className="w-3 h-3 mr-1" />
               Drive

@@ -26,14 +26,25 @@ export const googleApiClient = {
     return googleApi(`status?teamId=${encodeURIComponent(teamId)}`);
   },
 
+  getRedirectUri() {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/integrations/google/callback`;
+  },
+
   getOAuthUrl(teamId) {
-    return googleApi(`oauth-url?teamId=${encodeURIComponent(teamId)}`);
+    const redirectUri = this.getRedirectUri();
+    const qs = new URLSearchParams({ teamId, redirectUri });
+    return googleApi(`oauth-url?${qs}`);
   },
 
   exchangeCode(code, state) {
     return googleApi('oauth-token', {
       method: 'POST',
-      body: JSON.stringify({ code, state }),
+      body: JSON.stringify({
+        code,
+        state,
+        redirectUri: this.getRedirectUri(),
+      }),
     });
   },
 

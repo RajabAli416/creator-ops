@@ -7,7 +7,9 @@ export const GOOGLE_CLOUD_SETUP_STEPS = [
   'Paste the Client ID and Client secret below, then click Connect Google.',
 ];
 
+export const GOOGLE_OAUTH_CALLBACK_PATH = '/integrations/google/callback';
+
 export function getRedirectUriHint() {
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${origin}/integrations/google/callback`;
+  if (typeof window === 'undefined') return '';
+  return `${window.location.origin}${GOOGLE_OAUTH_CALLBACK_PATH}`;
 }

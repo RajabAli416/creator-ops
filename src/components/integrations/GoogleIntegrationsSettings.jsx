@@ -171,13 +171,25 @@ export default function GoogleIntegrationsSettings({ teamId }) {
 
         <div>
           <Label>Authorized redirect URI</Label>
-          <p className="text-xs text-muted-foreground mb-1">Add this exact URI to your OAuth web client</p>
+          <p className="text-xs text-muted-foreground mb-1">
+            In Google Cloud → Credentials → your OAuth client → <strong>Authorized redirect URIs</strong>, add
+            this exact value (must match the URL in your browser bar, including https).
+          </p>
           <div className="flex gap-2 mt-1">
             <Input readOnly value={redirectUri} className="font-mono text-xs" />
             <Button type="button" variant="outline" size="icon" onClick={copyRedirect}>
               <Copy className="w-4 h-4" />
             </Button>
           </div>
+          {status?.serverFallbackRedirectUri &&
+            status.serverFallbackRedirectUri !== redirectUri && (
+              <p className="text-xs text-amber-400 mt-2">
+                Vercel <code className="text-[10px]">APP_URL</code> is set to{' '}
+                <span className="font-mono">{status.serverFallbackRedirectUri}</span> but you are on{' '}
+                <span className="font-mono">{redirectUri}</span>. OAuth will use your current URL — add{' '}
+                <span className="font-mono">{redirectUri}</span> in Google Console (not only the APP_URL host).
+              </p>
+            )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
