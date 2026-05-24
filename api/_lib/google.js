@@ -44,6 +44,7 @@ export async function getStoredIntegration(teamId) {
 
 export async function saveIntegration(teamId, tokens, metadata = {}) {
   const admin = getAdminClient();
+  const existing = await getStoredIntegration(teamId);
   const expiresAt = tokens.expiry_date
     ? new Date(tokens.expiry_date).toISOString()
     : null;
@@ -51,11 +52,11 @@ export async function saveIntegration(teamId, tokens, metadata = {}) {
   const row = {
     team_id: teamId,
     service_name: 'google',
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    token_expires_at: expiresAt,
+    access_token: tokens.access_token ?? existing?.access_token,
+    refresh_token: tokens.refresh_token ?? existing?.refresh_token,
+    token_expires_at: expiresAt ?? existing?.token_expires_at,
     is_active: true,
-    metadata,
+    metadata: { ...(existing?.metadata || {}), ...metadata },
     updated_at: new Date().toISOString(),
   };
 

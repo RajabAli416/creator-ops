@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, Link2, Unplug, Copy, CheckCircle2, Loader2 } from 'lucide-react';
+import { ExternalLink, Link2, Unplug, Copy, Loader2 } from 'lucide-react';
+import GoogleConnectionStatus from '@/components/integrations/GoogleConnectionStatus';
+import { useGoogleConnection, clearGoogleConnectedMark } from '@/hooks/useGoogleConnection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,11 +40,17 @@ export default function GoogleIntegrationsSettings({ teamId }) {
     enabled: !!teamId,
   });
 
-  const { data: status, isLoading: statusLoading } = useQuery({
-    queryKey: ['google-status', teamId],
-    queryFn: () => googleApiClient.getStatus(teamId),
-    enabled: !!teamId,
-  });
+  const {
+    data: status,
+    connected,
+    configured,
+    channelTitle,
+    connectedAt,
+    isLoading: statusLoading,
+    isError: statusError,
+    error: statusErrorDetail,
+    refetch: refetchStatus,
+  } = useGoogleConnection(teamId);
 
   useEffect(() => {
     if (savedConfig?.client_id) setClientId(savedConfig.client_id);
@@ -94,6 +102,7 @@ export default function GoogleIntegrationsSettings({ teamId }) {
     }
     try {
       await googleApiClient.disconnect(teamId);
+      clearGoogleConnectedMark(teamId);
       queryClient.invalidateQueries({ queryKey: ['google-status', teamId] });
       toast.success('Google disconnected');
     } catch (err) {
@@ -125,30 +134,27 @@ export default function GoogleIntegrationsSettings({ teamId }) {
   return (
     <div className="space-y-6">
       <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-primary" />
-              Google (YouTube + Drive)
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Connect once per workspace. The pipeline scans Drive for final videos; owners and managers publish
-              to YouTube in one click from the board.
-            </p>
-          </div>
-          {!statusLoading && status?.connected && (
-            <span className="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Connected
-            </span>
-          )}
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Link2 className="w-5 h-5 text-primary" />
+            Google (YouTube + Drive)
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Connect once per workspace. The pipeline scans Drive for final videos; owners and managers publish
+            to YouTube in one click from the board.
+          </p>
         </div>
 
-        {status?.connected && status.channelTitle && (
-          <p className="text-sm text-muted-foreground">
-            YouTube channel: <span className="text-foreground">{status.channelTitle}</span>
-          </p>
-        )}
+        <GoogleConnectionStatus
+          connected={connected}
+          configured={configured}
+          channelTitle={channelTitle}
+          connectedAt={connectedAt}
+          isLoading={statusLoading}
+          isError={statusError}
+          error={statusErrorDetail}
+          onRetry={() => refetchStatus()}
+        />
 
         <div className="rounded-lg bg-secondary/50 p-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -214,7 +220,7 @@ export default function GoogleIntegrationsSettings({ teamId }) {
           </div>
         </div>
 
-        {status?.connected && (
+        {connected && (
           <div className="rounded-lg border border-border p-4 space-y-4">
             <p className="text-sm font-medium">Automated publishing</p>
             <p className="text-xs text-muted-foreground">
@@ -258,12 +264,12 @@ export default function GoogleIntegrationsSettings({ teamId }) {
           <Button
             variant="default"
             onClick={handleConnect}
-            disabled={connecting || !status?.configured}
+            disabled={connecting || !configured}
           >
             {connecting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
             Connect Google
           </Button>
-          {status?.connected && (
+          {connected && (
             <Button variant="outline" onClick={handleDisconnect}>
               <Unplug className="w-4 h-4 mr-2" />
               Disconnect

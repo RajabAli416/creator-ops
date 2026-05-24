@@ -60,7 +60,7 @@ export default async function handler(req, res) {
       connected_at: new Date().toISOString(),
     });
 
-    return res.status(200).json({ ok: true, channelTitle });
+    return res.status(200).json({ ok: true, connected: true, teamId, channelTitle });
   } catch (err) {
     console.error('oauth-token', err);
     return res.status(500).json({ error: err.message || 'Token exchange failed' });

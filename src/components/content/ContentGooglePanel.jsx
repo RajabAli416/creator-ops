@@ -19,6 +19,8 @@ import { useWorkspace } from '@/lib/workspace.jsx';
 import { useAuth } from '@/lib/AuthContext';
 import { canAttemptPublish, isReadyToPublish, publishStatusLabel } from '@/lib/publish';
 import { logActivity } from '@/lib/activity';
+import { useGoogleConnection } from '@/hooks/useGoogleConnection';
+import GoogleConnectionStatus from '@/components/integrations/GoogleConnectionStatus';
 
 export default function ContentGooglePanel({ contentItem, organizationId }) {
   const { user } = useAuth();
@@ -36,11 +38,17 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
     () => new Set(contentItem?.drive_shared_with || [])
   );
 
-  const { data: status } = useQuery({
-    queryKey: ['google-status', organizationId],
-    queryFn: () => googleApiClient.getStatus(organizationId),
-    enabled: !!organizationId,
-  });
+  const {
+    connected,
+    configured,
+    channelTitle,
+    connectedAt,
+    isLoading: statusLoading,
+    isError: statusError,
+    error: statusErrorDetail,
+    refetch: refetchStatus,
+    data: status,
+  } = useGoogleConnection(organizationId);
 
   const { data: members = [] } = useQuery({
     queryKey: ['team-members-google', organizationId],
@@ -48,8 +56,6 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
       api.entities.OrganizationMember.filter({ organization_id: organizationId }),
     enabled: !!organizationId && isOwner,
   });
-
-  const connected = status?.connected;
 
   useEffect(() => {
     if (status?.publishing?.defaultPrivacy) {
@@ -154,25 +160,33 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
     });
   };
 
-  if (!connected) {
-    return (
-      <div className="bg-card border border-border rounded-xl p-4">
-        <p className="text-xs text-muted-foreground">
-          {isOwner
-            ? 'Connect Google in Settings → Integrations to enable YouTube uploads and Drive folders.'
-            : 'Google is not connected for this workspace yet. Ask the owner to set it up in Settings.'}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-5">
       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         Google integrations
       </h3>
 
-      {canPublish && (
+      <GoogleConnectionStatus
+        connected={connected}
+        configured={configured}
+        channelTitle={channelTitle}
+        connectedAt={connectedAt}
+        isLoading={statusLoading}
+        isError={statusError}
+        error={statusErrorDetail}
+        onRetry={() => refetchStatus()}
+        compact
+      />
+
+      {!connected && !statusLoading && (
+        <p className="text-xs text-muted-foreground">
+          {isOwner
+            ? 'Connect Google in Settings → Integrations to enable publishing.'
+            : 'Ask the workspace owner to connect Google in Settings → Integrations.'}
+        </p>
+      )}
+
+      {connected && canPublish && (
         <div className="space-y-3 border-b border-border pb-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-medium">
@@ -256,6 +270,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
         </div>
       )}
 
+      {connected && (
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FolderOpen className="w-4 h-4 text-blue-400" />
@@ -315,6 +330,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }

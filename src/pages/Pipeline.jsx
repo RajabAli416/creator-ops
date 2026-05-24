@@ -10,7 +10,8 @@ import CreateContentModal from '@/components/pipeline/CreateContentModal';
 import EmptyState from '@/components/shared/EmptyState';
 import { KanbanSkeleton } from '@/components/shared/LoadingSkeleton';
 import { usePipelineDriveSync } from '@/hooks/usePipelineDriveSync';
-import { googleApiClient } from '@/api/google';
+import { useGoogleConnection } from '@/hooks/useGoogleConnection';
+import GoogleConnectionStatus from '@/components/integrations/GoogleConnectionStatus';
 
 export default function Pipeline() {
   const { currentOrg, canCreateContent, canPublish, hasPermission } = useWorkspace();
@@ -20,13 +21,16 @@ export default function Pipeline() {
 
   const isOwner = hasPermission(['owner']);
 
-  const { data: googleStatus } = useQuery({
-    queryKey: ['google-status', currentOrg?.id],
-    queryFn: () => googleApiClient.getStatus(currentOrg.id),
-    enabled: !!currentOrg?.id,
-  });
-
-  const googleConnected = !!googleStatus?.connected;
+  const {
+    connected: googleConnected,
+    configured: googleConfigured,
+    channelTitle: googleChannelTitle,
+    connectedAt: googleConnectedAt,
+    isLoading: googleStatusLoading,
+    isError: googleStatusError,
+    error: googleStatusErrorDetail,
+    refetch: refetchGoogleStatus,
+  } = useGoogleConnection(currentOrg?.id);
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['content', currentOrg?.id],
@@ -49,6 +53,22 @@ export default function Pipeline() {
 
   return (
     <div>
+      {(canPublish || isOwner) && (
+        <div className="mb-4">
+          <GoogleConnectionStatus
+            connected={googleConnected}
+            configured={googleConfigured}
+            channelTitle={googleChannelTitle}
+            connectedAt={googleConnectedAt}
+            isLoading={googleStatusLoading}
+            isError={googleStatusError}
+            error={googleStatusErrorDetail}
+            onRetry={() => refetchGoogleStatus()}
+            compact
+          />
+        </div>
+      )}
+
       <PageHeader
         title="Content Pipeline"
         description="Production stages update automatically from Drive and publishing. Open a card for details."

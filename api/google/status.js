@@ -23,9 +23,11 @@ export default async function handler(req, res) {
 
     const redirectUriFromRequest = resolveRedirectUri(req);
 
+    const connected = !!(integration?.refresh_token || integration?.access_token);
+
     return res.status(200).json({
       configured: !!(config?.client_id && config?.client_secret),
-      connected: !!(integration?.is_active && integration?.refresh_token),
+      connected,
       channelTitle: integration?.metadata?.channel_title || null,
       connectedAt: integration?.metadata?.connected_at || null,
       publishing: getPublishingSettings(integration),

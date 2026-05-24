@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { googleApiClient } from '@/api/google';
+import { useGoogleConnection } from '@/hooks/useGoogleConnection';
 
 const SCAN_INTERVAL_MS = 90_000;
 
@@ -8,14 +9,7 @@ const SCAN_INTERVAL_MS = 90_000;
  */
 export function usePipelineDriveSync(teamId, { enabled = true } = {}) {
   const queryClient = useQueryClient();
-
-  const { data: status } = useQuery({
-    queryKey: ['google-status', teamId],
-    queryFn: () => googleApiClient.getStatus(teamId),
-    enabled: !!teamId && enabled,
-  });
-
-  const connected = status?.connected;
+  const { connected } = useGoogleConnection(teamId && enabled ? teamId : null);
 
   useQuery({
     queryKey: ['drive-scan', teamId],

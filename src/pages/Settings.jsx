@@ -9,10 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PageHeader from '@/components/shared/PageHeader';
 import GoogleIntegrationsSettings from '@/components/integrations/GoogleIntegrationsSettings';
+import { useGoogleConnection } from '@/hooks/useGoogleConnection';
 import { toast } from 'sonner';
 
 export default function Settings() {
   const { currentOrg, createOrg, refreshWorkspaces, hasPermission } = useWorkspace();
+  const isOwner = hasPermission(['owner']);
+  const { connected: googleConnected, refetch: refetchGoogle } = useGoogleConnection(
+    isOwner ? currentOrg?.id : null
+  );
   const [tab, setTab] = useState('general');
   const [orgForm, setOrgForm] = useState({ name: '', description: '' });
   const [newOrgForm, setNewOrgForm] = useState({ name: '', slug: '', description: '' });
@@ -26,6 +31,12 @@ export default function Settings() {
     if (tabParam === 'workspace') setTab('workspace');
     if (tabParam === 'integrations') setTab('integrations');
   }, []);
+
+  useEffect(() => {
+    if (tab === 'integrations' && isOwner) {
+      refetchGoogle();
+    }
+  }, [tab, isOwner, refetchGoogle]);
 
   useEffect(() => {
     if (currentOrg) {
@@ -95,8 +106,17 @@ export default function Settings() {
         <TabsList className="bg-secondary mb-6">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workspace">New Workspace</TabsTrigger>
-          {hasPermission(['owner']) && (
-            <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="integrations" className="gap-1.5">
+              Integrations
+              {googleConnected && (
+                <span
+                  className="w-2 h-2 rounded-full bg-emerald-400"
+                  title="Google connected"
+                  aria-hidden
+                />
+              )}
+            </TabsTrigger>
           )}
         </TabsList>
 

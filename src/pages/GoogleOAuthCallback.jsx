@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { googleApiClient } from '@/api/google';
+import { markGoogleConnected } from '@/hooks/useGoogleConnection';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function GoogleOAuthCallback() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [state, setState] = useState({ status: 'loading', message: '' });
 
   useEffect(() => {
@@ -26,6 +29,10 @@ export default function GoogleOAuthCallback() {
     (async () => {
       try {
         const result = await googleApiClient.exchangeCode(code, oauthState);
+        if (result.teamId) {
+          markGoogleConnected(result.teamId);
+        }
+        await queryClient.invalidateQueries({ queryKey: ['google-status'] });
         setState({
           status: 'success',
           message: result.channelTitle
@@ -37,7 +44,7 @@ export default function GoogleOAuthCallback() {
         setState({ status: 'error', message: err.message || 'Connection failed' });
       }
     })();
-  }, [params, navigate]);
+  }, [params, navigate, queryClient]);
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 px-4">
