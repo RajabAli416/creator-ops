@@ -19,6 +19,8 @@ export function usePipelineDriveSync(teamId, { enabled = true } = {}) {
     },
     enabled: !!teamId && connected && enabled,
     refetchInterval: SCAN_INTERVAL_MS,
-    staleTime: 30_000,
+    staleTime: SCAN_INTERVAL_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

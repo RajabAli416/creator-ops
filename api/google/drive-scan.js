@@ -1,7 +1,12 @@
 import { google } from 'googleapis';
 import { getUserFromBearer, assertTeamMember, getAdminClient } from '../_lib/supabase.js';
 import { getAuthorizedClient, getStoredIntegration, getPublishingSettings } from '../_lib/google.js';
-import { parseContentMeta, mergeContentMeta } from '../_lib/content-meta.js';
+import {
+  parseContentMeta,
+  mergeContentMeta,
+  resolveDriveFolder,
+  withDriveFolderMeta,
+} from '../_lib/content-meta.js';
 import { listVideosInFolder, pickFinalVideo } from '../_lib/drive-final.js';
 import {
   AUTO_FOLDER_STAGES,
@@ -13,39 +18,82 @@ import {
   pipelineStageToDbStatus,
 } from '../_lib/pipeline-stages.js';
 
+async function refetchItem(admin, itemId, teamId) {
+  const { data, error } = await admin
+    .from('content_items')
+    .select('id, title, description, platform, platform_id, content_url, status')
+    .eq('id', itemId)
+    .eq('team_id', teamId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function persistItemUpdate(admin, itemId, teamId, payload) {
+  const { error } = await admin
+    .from('content_items')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', itemId)
+    .eq('team_id', teamId);
+  if (error) throw error;
+}
+
 async function ensureDriveFolder(drive, admin, item, teamId, publishing) {
-  const { meta } = parseContentMeta(item.description);
+  const fresh = await refetchItem(admin, item.id, teamId);
+  let { meta } = parseContentMeta(fresh.description);
   const stage = normalizePipelineStage(meta.pipeline_stage);
-  if (meta.drive_folder_id || !publishing.autoCreateDriveFolder) return null;
-  if (!AUTO_FOLDER_STAGES.has(stage)) return null;
+  const { folderId, folderUrl } = resolveDriveFolder(fresh, meta);
+
+  if (folderId) {
+    if (!meta.drive_folder_id) {
+      const description = mergeContentMeta(
+        fresh.description,
+        withDriveFolderMeta({ pipeline_stage: PIPELINE_IN_PRODUCTION }, fresh, meta)
+      );
+      await persistItemUpdate(admin, fresh.id, teamId, {
+        description,
+        content_url: folderUrl || fresh.content_url,
+        platform: 'google-drive',
+        platform_id: folderId,
+        status: pipelineStageToDbStatus(PIPELINE_IN_PRODUCTION),
+      });
+      meta = parseContentMeta(description).meta;
+    }
+    return { folderId, folderUrl, meta, created: false };
+  }
+
+  if (!publishing.autoCreateDriveFolder || !AUTO_FOLDER_STAGES.has(stage)) {
+    return null;
+  }
 
   const { data: folder } = await drive.files.create({
     requestBody: {
-      name: `${item.title} — assets`,
+      name: `${fresh.title} — assets`,
       mimeType: 'application/vnd.google-apps.folder',
     },
     fields: 'id, webViewLink',
   });
 
-  const description = mergeContentMeta(item.description, {
-    drive_folder_id: folder.id,
-    drive_folder_url: folder.webViewLink,
-    drive_shared_with: meta.drive_shared_with || [],
-    pipeline_stage: PIPELINE_IN_PRODUCTION,
-  });
+  const description = mergeContentMeta(
+    fresh.description,
+    withDriveFolderMeta(
+      {
+        drive_folder_id: folder.id,
+        drive_folder_url: folder.webViewLink,
+        pipeline_stage: PIPELINE_IN_PRODUCTION,
+      },
+      fresh,
+      meta
+    )
+  );
 
-  await admin
-    .from('content_items')
-    .update({
-      description,
-      content_url: folder.webViewLink,
-      platform: 'google-drive',
-      platform_id: folder.id,
-      status: pipelineStageToDbStatus(PIPELINE_IN_PRODUCTION),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', item.id)
-    .eq('team_id', teamId);
+  await persistItemUpdate(admin, fresh.id, teamId, {
+    description,
+    content_url: folder.webViewLink,
+    platform: 'google-drive',
+    platform_id: folder.id,
+    status: pipelineStageToDbStatus(PIPELINE_IN_PRODUCTION),
+  });
 
   return {
     folderId: folder.id,
@@ -56,6 +104,7 @@ async function ensureDriveFolder(drive, admin, item, teamId, publishing) {
       drive_folder_url: folder.webViewLink,
       pipeline_stage: PIPELINE_IN_PRODUCTION,
     },
+    created: true,
   };
 }
 
@@ -91,7 +140,7 @@ export default async function handler(req, res) {
 
     const { data: items, error } = await admin
       .from('content_items')
-      .select('id, title, description, platform, platform_id, status')
+      .select('id, title, description, platform, platform_id, content_url, status')
       .eq('team_id', teamId);
 
     if (error) throw error;
@@ -107,14 +156,13 @@ export default async function handler(req, res) {
 
       if (youtubeAlreadyPublished(meta, item)) {
         if (meta.pipeline_stage !== PIPELINE_PUBLISHED) {
-          await admin
-            .from('content_items')
-            .update({
-              description: mergeContentMeta(item.description, { pipeline_stage: PIPELINE_PUBLISHED }),
-              status: 'published',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', item.id);
+          await persistItemUpdate(admin, item.id, teamId, {
+            description: mergeContentMeta(
+              item.description,
+              withDriveFolderMeta({ pipeline_stage: PIPELINE_PUBLISHED }, item, meta)
+            ),
+            status: 'published',
+          });
         }
         results.push({
           contentItemId: item.id,
@@ -124,12 +172,31 @@ export default async function handler(req, res) {
         continue;
       }
 
-      const folderCreated = await ensureDriveFolder(drive, admin, item, teamId, publishing);
-      if (folderCreated) {
-        meta = folderCreated.meta;
+      const folderResult = await ensureDriveFolder(drive, admin, item, teamId, publishing);
+      let descriptionBase = item.description;
+      if (folderResult) {
+        meta = folderResult.meta;
+        descriptionBase = mergeContentMeta(
+          item.description,
+          withDriveFolderMeta(
+            {
+              drive_folder_id: folderResult.folderId,
+              drive_folder_url: folderResult.folderUrl,
+              pipeline_stage: meta.pipeline_stage,
+            },
+            item,
+            meta
+          )
+        );
       }
 
-      const folderId = meta.drive_folder_id;
+      const { folderId } = resolveDriveFolder(
+        folderResult
+          ? { ...item, platform: 'google-drive', platform_id: folderResult.folderId, content_url: folderResult.folderUrl }
+          : item,
+        meta
+      );
+
       const metaPatch = {};
 
       if (folderId && meta.pipeline_stage === PIPELINE_PLANNED) {
@@ -137,14 +204,12 @@ export default async function handler(req, res) {
       }
 
       if (!folderId) {
-        await admin
-          .from('content_items')
-          .update({
-            description: mergeContentMeta(item.description, metaPatch),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.id)
-          .eq('team_id', teamId);
+        await persistItemUpdate(admin, item.id, teamId, {
+          description: mergeContentMeta(
+            descriptionBase,
+            withDriveFolderMeta(metaPatch, item, meta)
+          ),
+        });
 
         results.push({
           contentItemId: item.id,
@@ -168,18 +233,16 @@ export default async function handler(req, res) {
         metaPatch.pipeline_stage = PIPELINE_IN_PRODUCTION;
       }
 
-      const description = mergeContentMeta(item.description, metaPatch);
       const stage = metaPatch.pipeline_stage || meta.pipeline_stage;
+      const description = mergeContentMeta(
+        descriptionBase,
+        withDriveFolderMeta(metaPatch, item, meta)
+      );
 
-      await admin
-        .from('content_items')
-        .update({
-          description,
-          status: pipelineStageToDbStatus(stage),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', item.id)
-        .eq('team_id', teamId);
+      await persistItemUpdate(admin, item.id, teamId, {
+        description,
+        status: pipelineStageToDbStatus(stage),
+      });
 
       results.push({
         contentItemId: item.id,
