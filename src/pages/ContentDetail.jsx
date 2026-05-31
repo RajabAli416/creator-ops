@@ -210,7 +210,12 @@ export default function ContentDetail() {
         <div className="space-y-4">
           {/* Status */}
           <div className="bg-card border border-border rounded-xl p-4">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Stage</h3>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Status
+            </h3>
+            <p className="text-xs text-muted-foreground mb-2">
+              Usually updates automatically from Drive and publishing.
+            </p>
             <Select value={item.status} onValueChange={handleStatusChange}>
               <SelectTrigger>
                 <SelectValue />

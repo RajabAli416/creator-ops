@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '@/api/client';
-import { useWorkspace, PIPELINE_STAGES, PRIORITY_CONFIG } from '@/lib/workspace.jsx';
+import { useWorkspace, PRIORITY_CONFIG } from '@/lib/workspace.jsx';
 import { logActivity } from '@/lib/activity';
 import {
   Dialog,
@@ -21,14 +21,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export default function CreateContentModal({ open, onOpenChange, defaultStatus, onCreated }) {
+export default function CreateContentModal({ open, onOpenChange, onCreated }) {
   const { currentOrg } = useWorkspace();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
-    status: defaultStatus || 'idea',
     priority: 'medium',
     due_date: '',
     assigned_members: [],
@@ -42,12 +41,6 @@ export default function CreateContentModal({ open, onOpenChange, defaultStatus, 
     }
   }, [currentOrg, open]);
 
-  useEffect(() => {
-    if (defaultStatus) {
-      setForm(f => ({ ...f, status: defaultStatus }));
-    }
-  }, [defaultStatus]);
-
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
     setLoading(true);
@@ -57,7 +50,7 @@ export default function CreateContentModal({ open, onOpenChange, defaultStatus, 
       organization_id: currentOrg.id,
       title: form.title,
       description: form.description,
-      status: form.status,
+      status: 'planned',
       priority: form.priority,
       due_date: form.due_date || undefined,
       assigned_members: form.assigned_members,
@@ -73,7 +66,7 @@ export default function CreateContentModal({ open, onOpenChange, defaultStatus, 
       details: `Created content "${form.title}"`,
     });
 
-    setForm({ title: '', description: '', status: 'idea', priority: 'medium', due_date: '', assigned_members: [], labels: '' });
+    setForm({ title: '', description: '', priority: 'medium', due_date: '', assigned_members: [], labels: '' });
     setLoading(false);
     onOpenChange(false);
     onCreated?.();
@@ -107,33 +100,21 @@ export default function CreateContentModal({ open, onOpenChange, defaultStatus, 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Stage</Label>
-              <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PIPELINE_STAGES.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Priority</Label>
-              <Select value={form.priority} onValueChange={v => setForm({ ...form, priority: v })}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
-                    <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Priority</Label>
+            <Select value={form.priority} onValueChange={v => setForm({ ...form, priority: v })}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+                  <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              New cards start in Planned. Stages update automatically from Drive and YouTube.
+            </p>
           </div>
 
           <div>

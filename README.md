@@ -31,6 +31,9 @@ cp .env.example .env.local
 
 1. `supabase/migrations/001_profiles_and_rls.sql` — profile trigger + RLS
 2. `supabase/migrations/002_google_integrations.sql` — Google OAuth config + integrations policies
+3. `supabase/migrations/005_integrations_fix_columns.sql` — missing `metadata` column (old table)
+4. `supabase/migrations/006_integrations_connected_by.sql` — `connected_by` NOT NULL errors
+5. `supabase/migrations/007_integrations_service_name_check.sql` — `service_name` check constraint rejects `google`
 
 **Google (YouTube + Drive):** workspace owners configure their own Google Cloud OAuth client in **Settings → Integrations**, connect Google, then publish from the pipeline or content detail. Server routes live under `/api/google/*`.
 
@@ -43,7 +46,7 @@ cp .env.example .env.local
 | `SUPABASE_SERVICE_ROLE_KEY` | Same (service_role — **never** expose to client) |
 | `APP_URL` | `https://your-app.vercel.app` (no trailing slash) |
 
-Run `supabase/migrations/002_google_integrations.sql` in the Supabase SQL Editor if the `integrations` table does not exist.
+Run migrations in the Supabase SQL Editor. If Google connect fails with **missing `metadata` column**, run `005_integrations_fix_columns.sql` (002 alone does not alter an existing table).
 
 For local dev, add the same keys to `.env.local` (see `.env.example`) and use `npm start` so `/api` works.
 

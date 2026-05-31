@@ -1,19 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '@/api/client';
+import { PIPELINE_STAGES } from '@/lib/pipelineStages.js';
 
 const WorkspaceContext = createContext(null);
 export const WORKSPACE_STORAGE_KEY = 'current_org_id';
-
-const PIPELINE_STAGES = [
-  { id: 'idea', label: 'Idea', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  { id: 'script', label: 'Script', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-  { id: 'recording', label: 'Recording', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
-  { id: 'editing', label: 'Editing', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
-  { id: 'thumbnail', label: 'Thumbnail', color: 'bg-pink-500/20 text-pink-400 border-pink-500/30' },
-  { id: 'review', label: 'Review', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-  { id: 'scheduled', label: 'Scheduled', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-  { id: 'published', label: 'Published', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
-];
 
 const PRIORITY_CONFIG = {
   low: { label: 'Low', color: 'bg-slate-500/20 text-slate-400' },
@@ -132,6 +122,9 @@ export function WorkspaceProvider({ children }) {
   /** Owner or manager — can publish to YouTube */
   const canPublish = hasPermission(['owner', 'manager']);
 
+  /** Owner or manager — can manage chat permissions and start DMs */
+  const canManageChat = hasPermission(['owner', 'manager']);
+
   /** True only for brand-new users with no workspace yet */
   const needsOnboarding = workspaceReady && !loading && orgs.length === 0;
 
@@ -152,6 +145,7 @@ export function WorkspaceProvider({ children }) {
         hasPermission,
         canCreateContent,
         canPublish,
+        canManageChat,
         refreshWorkspaces: () => loadWorkspaces(),
       }}
     >
@@ -162,3 +156,4 @@ export function WorkspaceProvider({ children }) {
 
 export const useWorkspace = () => useContext(WorkspaceContext);
 export { PIPELINE_STAGES, PRIORITY_CONFIG, ROLE_CONFIG };
+export { normalizePipelineStage } from '@/lib/pipelineStages.js';

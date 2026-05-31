@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PageHeader from '@/components/shared/PageHeader';
 import GoogleIntegrationsSettings from '@/components/integrations/GoogleIntegrationsSettings';
+import ChatPermissionsSettings from '@/components/chat/ChatPermissionsSettings';
 import { useGoogleConnection } from '@/hooks/useGoogleConnection';
 import { toast } from 'sonner';
 
@@ -30,6 +31,7 @@ export default function Settings() {
     const tabParam = urlParams.get('tab');
     if (tabParam === 'workspace') setTab('workspace');
     if (tabParam === 'integrations') setTab('integrations');
+    if (tabParam === 'chat') setTab('chat');
   }, []);
 
   useEffect(() => {
@@ -91,6 +93,7 @@ export default function Settings() {
   };
 
   const canEdit = hasPermission(['owner', 'manager']);
+  const canManageChat = hasPermission(['owner', 'manager']);
 
   const handleCopySlug = () => {
     if (!currentOrg?.slug) return;
@@ -106,6 +109,7 @@ export default function Settings() {
         <TabsList className="bg-secondary mb-6">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="workspace">New Workspace</TabsTrigger>
+          {canManageChat && <TabsTrigger value="chat">Chat</TabsTrigger>}
           {isOwner && (
             <TabsTrigger value="integrations" className="gap-1.5">
               Integrations
@@ -184,6 +188,18 @@ export default function Settings() {
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">No workspace selected. Create one in the "New Workspace" tab.</p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="chat">
+          {currentOrg && canManageChat ? (
+            <div className="bg-card border border-border rounded-xl p-6">
+              <ChatPermissionsSettings />
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              Only owners and managers can configure chat permissions.
+            </p>
           )}
         </TabsContent>
 

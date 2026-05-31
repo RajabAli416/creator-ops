@@ -3,13 +3,21 @@ import { getUserFromBearer, assertTeamMember, getAdminClient } from '../_lib/sup
 import { getAuthorizedClient, getStoredIntegration, getPublishingSettings } from '../_lib/google.js';
 import { parseContentMeta, mergeContentMeta } from '../_lib/content-meta.js';
 import { listVideosInFolder, pickFinalVideo } from '../_lib/drive-final.js';
-
-const AUTO_FOLDER_STAGES = new Set(['editing', 'thumbnail', 'review', 'scheduled']);
+import {
+  AUTO_FOLDER_STAGES,
+  normalizePipelineStage,
+  PIPELINE_IN_PRODUCTION,
+  PIPELINE_PLANNED,
+  PIPELINE_PUBLISHED,
+  PIPELINE_READY,
+  pipelineStageToDbStatus,
+} from '../_lib/pipeline-stages.js';
 
 async function ensureDriveFolder(drive, admin, item, teamId, publishing) {
-  const { text, meta } = parseContentMeta(item.description);
+  const { meta } = parseContentMeta(item.description);
+  const stage = normalizePipelineStage(meta.pipeline_stage);
   if (meta.drive_folder_id || !publishing.autoCreateDriveFolder) return null;
-  if (!AUTO_FOLDER_STAGES.has(meta.pipeline_stage || 'idea')) return null;
+  if (!AUTO_FOLDER_STAGES.has(stage)) return null;
 
   const { data: folder } = await drive.files.create({
     requestBody: {
@@ -23,6 +31,7 @@ async function ensureDriveFolder(drive, admin, item, teamId, publishing) {
     drive_folder_id: folder.id,
     drive_folder_url: folder.webViewLink,
     drive_shared_with: meta.drive_shared_with || [],
+    pipeline_stage: PIPELINE_IN_PRODUCTION,
   });
 
   await admin
@@ -32,12 +41,22 @@ async function ensureDriveFolder(drive, admin, item, teamId, publishing) {
       content_url: folder.webViewLink,
       platform: 'google-drive',
       platform_id: folder.id,
+      status: pipelineStageToDbStatus(PIPELINE_IN_PRODUCTION),
       updated_at: new Date().toISOString(),
     })
     .eq('id', item.id)
     .eq('team_id', teamId);
 
-  return { folderId: folder.id, folderUrl: folder.webViewLink, text, meta: { ...meta, drive_folder_id: folder.id, drive_folder_url: folder.webViewLink } };
+  return {
+    folderId: folder.id,
+    folderUrl: folder.webViewLink,
+    meta: {
+      ...meta,
+      drive_folder_id: folder.id,
+      drive_folder_url: folder.webViewLink,
+      pipeline_stage: PIPELINE_IN_PRODUCTION,
+    },
+  };
 }
 
 function youtubeAlreadyPublished(meta, row) {
@@ -81,17 +100,26 @@ export default async function handler(req, res) {
 
     for (const item of items || []) {
       let { meta } = parseContentMeta(item.description);
-      if (!meta.pipeline_stage) {
-        if (item.status === 'published') meta.pipeline_stage = 'published';
-        else if (item.status === 'scheduled') meta.pipeline_stage = 'scheduled';
-      }
+      meta.pipeline_stage = normalizePipelineStage(
+        meta.pipeline_stage ||
+          (item.status === 'published' ? PIPELINE_PUBLISHED : PIPELINE_PLANNED)
+      );
 
       if (youtubeAlreadyPublished(meta, item)) {
+        if (meta.pipeline_stage !== PIPELINE_PUBLISHED) {
+          await admin
+            .from('content_items')
+            .update({
+              description: mergeContentMeta(item.description, { pipeline_stage: PIPELINE_PUBLISHED }),
+              status: 'published',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.id);
+        }
         results.push({
           contentItemId: item.id,
           uploadStatus: 'uploaded',
-          driveFinalFileId: meta.drive_final_file_id || null,
-          driveFinalFileName: meta.drive_final_file_name || null,
+          pipelineStage: PIPELINE_PUBLISHED,
         });
         continue;
       }
@@ -99,19 +127,29 @@ export default async function handler(req, res) {
       const folderCreated = await ensureDriveFolder(drive, admin, item, teamId, publishing);
       if (folderCreated) {
         meta = folderCreated.meta;
-        item.description = mergeContentMeta(item.description, {
-          drive_folder_id: folderCreated.folderId,
-          drive_folder_url: folderCreated.folderUrl,
-        });
       }
 
       const folderId = meta.drive_folder_id;
+      const metaPatch = {};
+
+      if (folderId && meta.pipeline_stage === PIPELINE_PLANNED) {
+        metaPatch.pipeline_stage = PIPELINE_IN_PRODUCTION;
+      }
+
       if (!folderId) {
+        await admin
+          .from('content_items')
+          .update({
+            description: mergeContentMeta(item.description, metaPatch),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', item.id)
+          .eq('team_id', teamId);
+
         results.push({
           contentItemId: item.id,
           uploadStatus: 'pending',
-          driveFinalFileId: null,
-          driveFinalFileName: null,
+          pipelineStage: metaPatch.pipeline_stage || meta.pipeline_stage,
         });
         continue;
       }
@@ -119,40 +157,36 @@ export default async function handler(req, res) {
       const videos = await listVideosInFolder(drive, folderId);
       const finalFile = pickFinalVideo(videos);
 
-      const uploadStatus = finalFile ? 'ready' : 'pending';
-      const metaPatch = {
-        upload_status: uploadStatus,
-        drive_final_file_id: finalFile?.id || null,
-        drive_final_file_name: finalFile?.name || null,
-        drive_ready_at: finalFile ? new Date().toISOString() : null,
-      };
+      metaPatch.upload_status = finalFile ? 'ready' : 'pending';
+      metaPatch.drive_final_file_id = finalFile?.id || null;
+      metaPatch.drive_final_file_name = finalFile?.name || null;
+      metaPatch.drive_ready_at = finalFile ? new Date().toISOString() : null;
 
-      if (finalFile && !['review', 'scheduled', 'published'].includes(meta.pipeline_stage)) {
-        metaPatch.pipeline_stage = 'review';
+      if (finalFile) {
+        metaPatch.pipeline_stage = PIPELINE_READY;
+      } else if (!metaPatch.pipeline_stage) {
+        metaPatch.pipeline_stage = PIPELINE_IN_PRODUCTION;
       }
 
       const description = mergeContentMeta(item.description, metaPatch);
-
-      const dbPayload = {
-        description,
-        updated_at: new Date().toISOString(),
-      };
-      if (metaPatch.pipeline_stage) {
-        dbPayload.status = metaPatch.pipeline_stage === 'published' ? 'published' : 'draft';
-      }
+      const stage = metaPatch.pipeline_stage || meta.pipeline_stage;
 
       await admin
         .from('content_items')
-        .update(dbPayload)
+        .update({
+          description,
+          status: pipelineStageToDbStatus(stage),
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', item.id)
         .eq('team_id', teamId);
 
       results.push({
         contentItemId: item.id,
-        uploadStatus,
+        uploadStatus: metaPatch.upload_status,
         driveFinalFileId: finalFile?.id || null,
         driveFinalFileName: finalFile?.name || null,
-        pipelineStage: metaPatch.pipeline_stage || meta.pipeline_stage,
+        pipelineStage: stage,
       });
     }
 

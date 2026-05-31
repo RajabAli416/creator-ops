@@ -1,4 +1,5 @@
 import { getUserFromBearer, assertTeamOwner, getAdminClient } from '../_lib/supabase.js';
+import { GOOGLE_SERVICE_NAME } from '../_lib/google.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
       .from('integrations')
       .delete()
       .eq('team_id', teamId)
-      .eq('service_name', 'google');
+      .eq('service_name', GOOGLE_SERVICE_NAME);
 
     if (error) throw error;
     return res.status(200).json({ ok: true });

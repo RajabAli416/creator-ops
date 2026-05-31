@@ -7,6 +7,7 @@ import {
   CheckSquare, 
   Users, 
   Settings, 
+  MessageSquare,
   Plus,
   ChevronDown,
   Zap,
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/pipeline', icon: Kanban, label: 'Pipeline' },
   { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
+  { path: '/chat', icon: MessageSquare, label: 'Chat' },
   { path: '/team', icon: Users, label: 'Team' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];

@@ -259,7 +259,7 @@ export const ContentItem = {
 
   async create(data) {
     const user = await requireUser();
-    const pipelineStage = data.status || 'idea';
+    const pipelineStage = data.status || 'planned';
 
     const { data: row, error } = await supabase
       .from('content_items')
@@ -348,13 +348,16 @@ export const ContentItem = {
         drive_final_file_name: data.drive_final_file_name ?? meta.drive_final_file_name,
         drive_ready_at: data.drive_ready_at ?? meta.drive_ready_at,
       };
+      if (data.drive_folder_id != null && data.status == null) {
+        merged.status = 'in_production';
+      }
       payload.description = packContentDescription(merged);
-      if (data.status != null) {
-        payload.status = pipelineStageToDbStatus(data.status);
-        if (data.status === 'scheduled' && data.due_date) {
+      if (data.status != null || data.drive_folder_id != null) {
+        payload.status = pipelineStageToDbStatus(merged.status);
+        if (data.due_date != null) {
           payload.scheduled_for = new Date(data.due_date).toISOString();
         }
-        if (data.status === 'published') {
+        if (merged.status === 'published') {
           payload.published_at = new Date().toISOString();
         }
       }

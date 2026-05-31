@@ -116,7 +116,7 @@ export default function GoogleOAuthCallback() {
         if (!status?.connected) {
           const hint = !status?.serverConfigured?.hasServiceRoleKey
             ? 'SUPABASE_SERVICE_ROLE_KEY is missing on Vercel.'
-            : 'Run supabase/migrations/002_google_integrations.sql in Supabase.';
+            : 'Run supabase/migrations/005_integrations_fix_columns.sql in Supabase SQL Editor.';
           throw new Error(`Tokens were not stored. ${hint}`);
         }
 

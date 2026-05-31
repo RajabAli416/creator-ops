@@ -1,5 +1,10 @@
-const PIPELINE_PUBLISHED = 'published';
-const PIPELINE_SCHEDULED = 'scheduled';
+import {
+  normalizePipelineStage,
+  PIPELINE_PUBLISHED,
+  PIPELINE_PLANNED,
+} from '@/lib/pipelineStages.js';
+
+const PIPELINE_SCHEDULED_LEGACY = 'scheduled';
 
 /** UI role (manager, writer) ↔ DB role (admin, editor) */
 export function roleToDb(uiRole) {
@@ -13,18 +18,20 @@ export function roleFromDb(dbRole) {
   return dbRole;
 }
 
+export { normalizePipelineStage } from '@/lib/pipelineStages.js';
+
 export function pipelineStageToDbStatus(stage) {
-  if (stage === PIPELINE_PUBLISHED) return 'published';
-  if (stage === PIPELINE_SCHEDULED) return 'scheduled';
+  const normalized = normalizePipelineStage(stage);
+  if (normalized === PIPELINE_PUBLISHED) return 'published';
   if (stage === 'archived') return 'archived';
   return 'draft';
 }
 
 export function dbStatusToPipelineStage(status, metaStage) {
-  if (metaStage) return metaStage;
+  if (metaStage) return normalizePipelineStage(metaStage);
   if (status === 'published') return PIPELINE_PUBLISHED;
-  if (status === 'scheduled') return PIPELINE_SCHEDULED;
-  return 'idea';
+  if (status === PIPELINE_SCHEDULED_LEGACY) return 'ready_to_publish';
+  return PIPELINE_PLANNED;
 }
 
 export function packContentDescription({
@@ -67,7 +74,7 @@ export function packContentDescription({
 
   return JSON.stringify({
     _meta: {
-      pipeline_stage: status || 'idea',
+      pipeline_stage: normalizePipelineStage(status || PIPELINE_PLANNED),
       priority: priority || 'medium',
       due_date: due_date || null,
       assigned_members: assigned_members || [],
@@ -89,7 +96,7 @@ export function packContentDescription({
 
 export function unpackContentDescription(raw) {
   if (!raw) {
-    return { text: '', meta: { pipeline_stage: 'idea', priority: 'medium', assigned_members: [], labels: [], sort_order: 0 } };
+    return { text: '', meta: { pipeline_stage: PIPELINE_PLANNED, priority: 'medium', assigned_members: [], labels: [], sort_order: 0 } };
   }
   try {
     const parsed = JSON.parse(raw);
@@ -97,7 +104,7 @@ export function unpackContentDescription(raw) {
       return {
         text: parsed.text || '',
         meta: {
-          pipeline_stage: parsed._meta.pipeline_stage || 'idea',
+          pipeline_stage: normalizePipelineStage(parsed._meta.pipeline_stage || PIPELINE_PLANNED),
           priority: parsed._meta.priority || 'medium',
           due_date: parsed._meta.due_date || null,
           assigned_members: parsed._meta.assigned_members || [],
@@ -118,7 +125,7 @@ export function unpackContentDescription(raw) {
   } catch {
     /* plain text description */
   }
-  return { text: raw, meta: { pipeline_stage: 'idea', priority: 'medium', assigned_members: [], labels: [], sort_order: 0 } };
+  return { text: raw, meta: { pipeline_stage: PIPELINE_PLANNED, priority: 'medium', assigned_members: [], labels: [], sort_order: 0 } };
 }
 
 export function mapTeamToOrg(team, creatorEmail = null) {
@@ -159,7 +166,7 @@ export function mapContentRow(row) {
     organization_id: row.team_id,
     title: row.title,
     description: text,
-    status: dbStatusToPipelineStage(row.status, meta.pipeline_stage),
+    status: normalizePipelineStage(dbStatusToPipelineStage(row.status, meta.pipeline_stage)),
     priority: meta.priority,
     due_date: meta.due_date,
     assigned_members: meta.assigned_members,
@@ -214,6 +221,44 @@ export function mapAuditRow(row) {
     entity_type: row.entity_type,
     details: changes.details || '',
     created_date: row.created_at,
+  };
+}
+
+export function mapChatRoomRow(row) {
+  return {
+    id: row.id,
+    organization_id: row.team_id,
+    type: row.type,
+    created_by: row.created_by,
+    created_date: row.created_at,
+    participants: (row.participants || []).map((p) => ({
+      user_id: p.user_id,
+      joined_at: p.created_at,
+    })),
+  };
+}
+
+export function mapChatMessageRow(row) {
+  const profile = row.profiles || row.profile;
+  return {
+    id: row.id,
+    room_id: row.room_id,
+    organization_id: row.team_id,
+    sender_id: row.sender_id,
+    sender_name: profile?.full_name || profile?.email || '',
+    sender_email: profile?.email || '',
+    body: row.body,
+    created_date: row.created_at,
+  };
+}
+
+export function mapChatPermissionRow(row) {
+  return {
+    id: row.id,
+    organization_id: row.team_id,
+    user_id: row.user_id,
+    general_chat_enabled: row.general_chat_enabled,
+    updated_date: row.updated_at,
   };
 }
 

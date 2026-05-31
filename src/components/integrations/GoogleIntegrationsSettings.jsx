@@ -246,7 +246,7 @@ export default function GoogleIntegrationsSettings({ teamId }) {
               <div>
                 <p className="text-sm">Auto-create Drive folder</p>
                 <p className="text-xs text-muted-foreground">
-                  When a card reaches Editing, create its assets folder automatically
+                  When a card moves to In production, create its assets folder automatically
                 </p>
               </div>
               <Switch checked={autoCreateDriveFolder} onCheckedChange={setAutoCreateDriveFolder} />

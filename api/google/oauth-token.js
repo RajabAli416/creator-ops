@@ -54,11 +54,16 @@ export default async function handler(req, res) {
       /* optional */
     }
 
-    const saved = await saveIntegration(teamId, tokens, {
-      channel_title: channelTitle,
-      connected_by: user.email,
-      connected_at: new Date().toISOString(),
-    });
+    const saved = await saveIntegration(
+      teamId,
+      tokens,
+      {
+        channel_title: channelTitle,
+        connected_by: user.email,
+        connected_at: new Date().toISOString(),
+      },
+      { connectedBy: user.id }
+    );
 
     return res.status(200).json({
       ok: true,

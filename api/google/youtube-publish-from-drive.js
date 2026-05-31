@@ -3,6 +3,7 @@ import { getUserFromBearer, assertTeamPublisher, getAdminClient } from '../_lib/
 import { getAuthorizedClient, getStoredIntegration, getPublishingSettings } from '../_lib/google.js';
 import { parseContentMeta, mergeContentMeta } from '../_lib/content-meta.js';
 import { listVideosInFolder, pickFinalVideo } from '../_lib/drive-final.js';
+import { PIPELINE_PUBLISHED } from '../_lib/pipeline-stages.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -121,7 +122,7 @@ export default async function handler(req, res) {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     const descriptionPayload = mergeContentMeta(item.description, {
-      pipeline_stage: 'published',
+      pipeline_stage: PIPELINE_PUBLISHED,
       upload_status: 'uploaded',
       youtube_video_id: videoId,
       youtube_video_url: videoUrl,

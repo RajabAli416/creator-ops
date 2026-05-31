@@ -14,6 +14,7 @@ import Pipeline from '@/pages/Pipeline';
 import ContentDetail from '@/pages/ContentDetail';
 import Tasks from '@/pages/Tasks';
 import Team from '@/pages/Team';
+import Chat from '@/pages/Chat';
 import Settings from '@/pages/Settings';
 import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
@@ -54,6 +55,7 @@ const AppRoutes = () => {
         <Route path="/content/:id" element={<ContentDetail />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/team" element={<Team />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

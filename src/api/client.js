@@ -9,6 +9,7 @@ import {
   getPendingTeamInvites,
   acceptTeamInvite,
 } from '@/api/supabase/entities';
+import { ChatRoom, ChatMessage, ChatPermission, subscribeToChatRoom } from '@/api/supabase/chat';
 
 export const api = {
   auth: supabaseAuth,
@@ -19,6 +20,13 @@ export const api = {
     ContentItem,
     Task,
     ActivityLog,
+    ChatRoom,
+    ChatMessage,
+    ChatPermission,
+  },
+
+  chat: {
+    subscribeToChatRoom,
   },
 
   workspace: {

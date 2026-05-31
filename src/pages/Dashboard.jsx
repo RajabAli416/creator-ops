@@ -52,7 +52,9 @@ export default function Dashboard() {
   const overdueTasks = tasks.filter(
     t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'done'
   );
-  const inProgress = contentItems.filter(i => !['idea', 'published'].includes(i.status));
+  const inProgress = contentItems.filter(
+    (i) => !['planned', 'published'].includes(i.status)
+  );
   const published = contentItems.filter(i => i.status === 'published');
   const completedTasks = tasks.filter(t => t.status === 'done');
 

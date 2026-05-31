@@ -1,6 +1,8 @@
 import { google } from 'googleapis';
 import { getUserFromBearer, assertTeamOwner, getAdminClient } from '../_lib/supabase.js';
 import { getAuthorizedClient } from '../_lib/google.js';
+import { mergeContentMeta } from '../_lib/content-meta.js';
+import { PIPELINE_IN_PRODUCTION, pipelineStageToDbStatus } from '../_lib/pipeline-stages.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -55,18 +57,12 @@ export default async function handler(req, res) {
       .eq('id', contentItemId)
       .single();
 
-    let descriptionPayload = existing?.description;
-    try {
-      const parsed = JSON.parse(descriptionPayload || '{}');
-      if (parsed?._meta) {
-        parsed._meta.drive_folder_id = folder.id;
-        parsed._meta.drive_folder_url = folder.webViewLink;
-        parsed._meta.drive_shared_with = emails;
-        descriptionPayload = JSON.stringify(parsed);
-      }
-    } catch {
-      /* keep plain description */
-    }
+    const descriptionPayload = mergeContentMeta(existing?.description, {
+      drive_folder_id: folder.id,
+      drive_folder_url: folder.webViewLink,
+      drive_shared_with: emails,
+      pipeline_stage: PIPELINE_IN_PRODUCTION,
+    });
 
     const { error: updateError } = await admin
       .from('content_items')
@@ -75,6 +71,7 @@ export default async function handler(req, res) {
         content_url: folder.webViewLink,
         platform: 'google-drive',
         platform_id: folder.id,
+        status: pipelineStageToDbStatus(PIPELINE_IN_PRODUCTION),
         updated_at: new Date().toISOString(),
       })
       .eq('id', contentItemId)

@@ -4,6 +4,9 @@ import { getGoogleRedirectUri } from './env.js';
 
 export { buildGoogleRedirectUri, validateRedirectUri, resolveRedirectUri } from './env.js';
 
+/** Row key in public.integrations for workspace Google OAuth (YouTube + Drive). */
+export const GOOGLE_SERVICE_NAME = 'google';
+
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
@@ -36,29 +39,39 @@ export async function getStoredIntegration(teamId) {
     .from('integrations')
     .select('*')
     .eq('team_id', teamId)
-    .eq('service_name', 'google')
+    .eq('service_name', GOOGLE_SERVICE_NAME)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function saveIntegration(teamId, tokens, metadata = {}) {
+export async function saveIntegration(teamId, tokens, metadata = {}, extra = {}) {
   const admin = getAdminClient();
   const existing = await getStoredIntegration(teamId);
   const expiresAt = tokens.expiry_date
     ? new Date(tokens.expiry_date).toISOString()
     : null;
 
+  const mergedMeta = { ...(existing?.metadata || {}), ...metadata };
+
+  // Legacy DB schemas may have top-level connected_by (uuid/text) NOT NULL — not only metadata jsonb
+  const connectedBy =
+    extra.connectedBy ?? existing?.connected_by ?? mergedMeta.connected_by ?? null;
+
   const row = {
     team_id: teamId,
-    service_name: 'google',
+    service_name: GOOGLE_SERVICE_NAME,
     access_token: tokens.access_token ?? existing?.access_token,
     refresh_token: tokens.refresh_token ?? existing?.refresh_token,
     token_expires_at: expiresAt ?? existing?.token_expires_at,
     is_active: true,
-    metadata: { ...(existing?.metadata || {}), ...metadata },
+    metadata: mergedMeta,
     updated_at: new Date().toISOString(),
   };
+
+  if (connectedBy) {
+    row.connected_by = connectedBy;
+  }
 
   if (!row.refresh_token) {
     throw new Error('No Google refresh token to save');
@@ -81,7 +94,7 @@ export async function saveIntegration(teamId, tokens, metadata = {}) {
       const { error: insertError } = await admin.from('integrations').insert(row);
       if (insertError) {
         throw new Error(
-          `Could not save Google tokens: ${insertError.message}. Run supabase/migrations/002_google_integrations.sql in Supabase.`
+          `Could not save Google tokens: ${insertError.message}. Run migrations 005–007 in supabase/migrations/ (SQL Editor).`
         );
       }
     }

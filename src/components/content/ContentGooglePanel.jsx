@@ -294,7 +294,7 @@ export default function ContentGooglePanel({ contentItem, organizationId }) {
         ) : isOwner ? (
           <>
             <p className="text-xs text-muted-foreground">
-              Folders are also created automatically when a card reaches Editing (if enabled in Integrations).
+              Folders are also created automatically when a card is In production (if enabled in Integrations).
             </p>
             {members.length > 0 && (
               <div className="space-y-2 max-h-32 overflow-y-auto">

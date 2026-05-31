@@ -17,7 +17,6 @@ export default function Pipeline() {
   const { currentOrg, canCreateContent, canPublish, hasPermission } = useWorkspace();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
-  const [defaultStage, setDefaultStage] = useState('idea');
 
   const isOwner = hasPermission(['owner']);
 
@@ -41,8 +40,7 @@ export default function Pipeline() {
 
   usePipelineDriveSync(currentOrg?.id);
 
-  const handleAddContent = (stageId) => {
-    setDefaultStage(stageId);
+  const handleAddContent = () => {
     setCreateOpen(true);
   };
 
@@ -73,12 +71,11 @@ export default function Pipeline() {
 
       <PageHeader
         title="Content Pipeline"
-        description="Production stages update automatically from Drive and publishing. Open a card for details."
+        description="Four stages — Planned → In production → Ready to publish → Published. Updates automatically from Drive and YouTube."
       >
         {canCreateContent && (
           <Button
             onClick={() => {
-              setDefaultStage('idea');
               setCreateOpen(true);
             }}
             className="bg-primary hover:bg-primary/90"
@@ -114,7 +111,7 @@ export default function Pipeline() {
                 key={stage.id}
                 stageId={stage.id}
                 items={stageItems}
-                canAdd={canCreateContent}
+                canAdd={canCreateContent && stage.id === 'planned'}
                 onAddContent={handleAddContent}
                 organizationId={currentOrg.id}
                 canPublish={canPublish}
@@ -130,7 +127,6 @@ export default function Pipeline() {
       <CreateContentModal
         open={createOpen}
         onOpenChange={setCreateOpen}
-        defaultStatus={defaultStage}
         onCreated={() => queryClient.invalidateQueries({ queryKey: ['content', currentOrg?.id] })}
       />
     </div>
